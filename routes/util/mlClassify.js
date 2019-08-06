@@ -970,7 +970,10 @@ function multiEntryCheck(firstEntry, entry, doctype) {
         // {
         //     deleteY = 5000
         // }
-        if(entry["text"] != "TOTAL" && entry["text"] != "인수확인자" && entry["text"] != "제품의포장" && entry["text"] != "(인)")
+        if(entry["text"] != "TOTAL" && entry["text"] != "인수확인자" && entry["text"] != "제품의포장" && entry["text"] != "(인)" && entry["text"] != "포장"
+            && entry["text"] != "제품의" && entry["text"] != "포장@" && entry["text"] != "하" && entry["text"] != "인" && entry["text"] != "제품의포장@"
+            && entry["text"] != "품의"
+            )
         // if(Number(entryLoc[1]) < deleteY)
         {
             if (verticalCheck(firstLoc, entryLoc, 100, -100) && locationCheck(firstLoc[1], entryLoc[1], 0, -2000)) {
