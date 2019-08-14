@@ -218,22 +218,22 @@ function appendMLData(docLabelList, docDataList) {
 
     var totalHTML = '';
     if (docTopType == 51 || docTopType == 61) { // 일반송장 || 철근송장
-        appendMultiHTML(docLabelList, docDataList);
+        appendMultiHTML(docLabelList, docDataList, docTopType);
     } else {
-        totalHTML = appendSingleHTML(docDataList);
+        totalHTML = appendSingleHTML(docDataList, docTopType);
         $('#tbody_docList').append(totalHTML);
     }
 }
 
 // 싱글 entry HTML 렌더링
-function appendSingleHTML(docDataList) {
+function appendSingleHTML(docDataList, docTopType) {
     var returnHTML = '';
     for (var i in docDataList) {
         var mlDataListHTML = '' +
             '<tr class="originalTr">' +
             '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].SEQ + '" name="seq" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
             '<td>' +
-            '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ')">' +
+            '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +')">' +
             '<input type="text" value="' + docDataList[i].FILENAME.substring(docDataList[i].FILENAME.lastIndexOf('/') + 1) + '" class="inputst_box03_15radius fileNameInput" data-originalvalue="' + docDataList[i].FILENAME + '" disabled>' +
             '</a>' +
             '</td>' +
@@ -258,7 +258,7 @@ function appendSingleHTML(docDataList) {
 }
 
 // 멀티 entry HTML 렌더링
-function appendMultiHTML(docLabelList, docDataList) {   
+function appendMultiHTML(docLabelList, docDataList, docTopType) {   
     var multiLabelNumArr = [];
     var multiLabelYLocArr = [];
 
@@ -281,7 +281,7 @@ function appendMultiHTML(docLabelList, docDataList) {
                     '<tr class="originalTr">' +
                     '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].SEQ + '" name="seq" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
                     '<td>' +
-                    '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ')">' +
+                    '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +')">' +
                     '<input type="text" value="' + docDataList[i].FILENAME.substring(docDataList[i].FILENAME.lastIndexOf('/') + 1) + '" class="inputst_box03_15radius fileNameInput" data-originalvalue="' + docDataList[i].FILENAME + '" disabled>' +
                     '</a>' +
                     '</td>' +
@@ -384,11 +384,12 @@ function startClick(fileName, seq) {
 }
 
 //이미지 팝업 이벤트
-function openImagePop(fileName, seq) {
+function openImagePop(fileName, seq, docTopType) {
     clearTimeout(timeOut);
+    console.log(docTopType);
     var convertFilePath = fileName.split('.pdf')[0] + '-0.jpg';
     $('#PopupImg').attr('src', convertFilePath.replace(/\/uploads/, '/img'));
-    appendPopTable(fileName, seq);
+    appendPopTable(fileName, seq, docTopType);
     layer_open('docPop');
     numClicks = 0;
 
@@ -435,7 +436,7 @@ function hideBtnClick(){
 }
 
 // 이미지 파업 하단 테이블 렌더링
-function appendPopTable(fileName, seq) {
+function appendPopTable(fileName, seq, docTopType) {
     var popTableHeaderColHTML = '<colgroup>';
     var popTableHeaderTheadHTML = '<thead><tr>';
     var popTableContentHTML = '<tbody>';
@@ -464,12 +465,48 @@ function appendPopTable(fileName, seq) {
     if (labels.length > 0) {
         for (var i = 4; i < 4 + labels.length; i++) {
             var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
-            popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+
+            if(docTopType == "58" && (i == "7" || i == "9" || i == "10" || i == "12" || i == "13" || i == "14" || i == "16" ))
+            {
+                console.log("111");
+                console.log("["+ i +"]" + valueText);
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';
+            }
+            else if((docTopType == "51" || docTopType == "59") && (i == "7" ))
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+            }
+            else if(docTopType == "61" && (i == "10" || i == "11" || i == "12" || i == "13" || i == "15" ))
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+            }
+            else
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+            }
+            // popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
         }
     } else {
         for (var i = 4; i < 4 + datas[0].EXPORTDATA.split(',').length; i++) {
             var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
-            popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+            //popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+            if(docTopType == "58" && (i == "7" || i == "9" || i == "10" || i == "12" || i == "13" || i == "14" || i == "16" ))
+            {
+                console.log("222");
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';
+            }
+            else if((docTopType == "51" || docTopType == "59") && (i == "7" ))
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+            }
+            else if(docTopType == "61" && (i == "10" || i == "11" || i == "12" || i == "13" || i == "15" ))
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+            }
+            else
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+            }
         }
     }
     popTableContentHTML += '</tr>';
@@ -479,7 +516,20 @@ function appendPopTable(fileName, seq) {
             popTableContentHTML += '<tr>'
             for (var j = 4; j < 4 + labels.length; j++) {
                 var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(j).find('input').eq(0).val();
-                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+
+                if((docTopType == "51" || docTopType == "59") && (j == "7" ))
+                {
+                    popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+                }
+                else if(docTopType == "61" && (j == "10" || j == "11" || j == "12" || j == "13" || j == "15" ))
+                {
+                    popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+                }
+                else
+                {
+                    popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';    
+                }
+                // popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
             }
             popTableContentHTML += '</tr>';
         }
