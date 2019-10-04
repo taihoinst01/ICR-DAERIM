@@ -22,7 +22,7 @@ var ocrUtil = require('../util/ocr.js');
 var ocrJs = require('../util/ocr.js');
 var propertiesConfig = require(appRoot + '/config/propertiesConfig.js');
 
-const winston = require('../util/winston')
+//const winston = require('../util/winston')
 
 const upload = multer({
     storage: multer.diskStorage({
@@ -129,13 +129,22 @@ function uiLearnTraining_new(filepath, isAuto, callback) {
                             if(retData.data[ii]["entryLbl"] == labelData.rows[jj].SEQNUM) {
                                 var re = new RegExp(labelData.rows[jj].VALID,'gi');   
                                 var keyParts = retData.data[ii]["text"].match(re); 
-                                if(keyParts != null && labelData.rows[jj].SEQNUM !="877")
+                                if(keyParts != null && labelData.rows[jj].SEQNUM !="877" && labelData.rows[jj].SEQNUM !="504")
                                 {
                                     retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
                                 }
                             }                                
                         }
                     }                        
+                }
+
+                retData = sync.await(oracle.selectNumTypo(retData, labelData, sync.defer()));
+
+                if (isAuto) {
+                    // TBL_BATCH_PO_ML_EXPORT table에 exportData 가공
+                    var exportData = sync.await(processingExportData(retData.data, labelData.rows, sync.defer()));
+                    // TBL_BATCH_PO_ML_EXPORT table insert
+                    sync.await(oracle.insertBatchPoMlExportFromUi([retData.docCategory.DOCTOPTYPE, filepath, exportData], sync.defer()));
                 }
 
                 retData.fileinfo = {
@@ -188,6 +197,34 @@ function uiLearnTraining_new(filepath, isAuto, callback) {
         } catch (e) {
             console.log(icrRestResult);
             callback(null, null);
+        }
+
+    });
+}
+
+//TBL_BATCH_PO_ML_EXPORT's exportData column data processing
+function processingExportData(mlData, labels, done) {
+    sync.fiber(function () {
+        try {
+            var exportData = "[";
+            for (var i in labels) {
+                var entryData = "";
+                for (var j in mlData) {
+                    var item = null;
+                    if (mlData[j].entryLbl && labels[i].SEQNUM == mlData[j].entryLbl) {
+                        item = ((entryData == "") ? "" : " | ") + mlData[j].location.split(',')[1] + "::" + mlData[j].text;
+                        entryData += item;
+                    }
+                }
+                exportData += ((entryData != "") ? "\"" + entryData.replace(/,/gi,'') + "\"" : null);
+                exportData += ",";
+            }
+            exportData = exportData.slice(0, -1);
+            exportData += "]";
+            return done(null, exportData);
+
+        } catch (e) {
+            throw e;
         }
 
     });

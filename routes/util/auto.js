@@ -266,10 +266,16 @@ function uiLearnTraining_auto(filepath, isAuto, callback) {
                                 // {
                                 //     retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
                                 // }
+                                if(keyParts != null && labelData.rows[jj].SEQNUM !="877" && labelData.rows[jj].SEQNUM !="504")
+                                {
+                                    retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
+                                }
                             }                                
                         }
                     }                        
                 }
+
+                retData = sync.await(oracle.selectNumTypo(retData, labelData, sync.defer()));
 
                 retData.fileinfo = {
                     filepath: propertiesConfig.auto.ftpFileUrl + resPyArr[i].originFileName,
@@ -331,13 +337,16 @@ function apiCall(apiData, done) {
                 var fileName = apiData[i].data.FILENAME.substring(apiData[i].data.FILENAME.lastIndexOf('/')+1, apiData[i].data.FILENAME.length);
                 var senedFileName = apiData[i].data.FILENAME.substring(0,apiData[i].data.FILENAME.lastIndexOf('/')+1)+"org_"+apiData[i].data.FILENAME.substring(apiData[i].data.FILENAME.lastIndexOf('/')+1);
                 reqParams.data[i]["inviceType"] = apiData[i].data.ENGNM;
-                reqParams.data[i]["sequence"] = apiData[i].data.SEQ;
+                //reqParams.data[i]["sequence"] = apiData[i].data.SEQ;
+                reqParams.data[i]["sequence"] = apiData[i].data.API_SEQ;
                 // reqParams.data[i]["fileName"] = apiData[i].data.FILENAME.replace('.pdf', '-0.jpg').replace('/uploads/','/img/');
                 reqParams.data[i]["fileName"] = senedFileName.replace('.pdf', '-0.jpg').replace('/uploads/','/img/');
                 //reqParams.data[i]["cdSite"] = 'DAE100083';
                 reqParams.data[i]["editFileName"] = '';
                 reqParams.data[i]["cdSite"] = fileName.split('_')[0];
                 reqParams.data[i]["scanDate"] = apiData[i].data.AUTOSENDTIME;
+                reqParams.data[i]["ivgtrNoSral"] = 0;
+                reqParams.data[i]["ivgtrRes"] = "N";
                 reqParams.data[i]["ocrData"] = [];
                 for (var j = 0; j < apiData[i].labels.length; j++) reqParams.data[i]["ocrData"].push({});
 

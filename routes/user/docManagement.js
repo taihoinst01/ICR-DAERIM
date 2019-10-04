@@ -89,7 +89,19 @@ router.post('/sendOcrData', function (req, res) {
             do {
                 var apiResponse = request('POST', propertiesConfig.api.invoiceApi, { json: reqParams });
                 var apiRes = JSON.parse(apiResponse.getBody('utf8'));
-                console.log(apiRes)
+                console.log(apiRes);
+
+                if (apiRes.success == false || apiRes.success == "false") {
+                    var cdSite = apiRes.cdSite;
+
+                    for (var i = 0; i < apiRes.error.sequence.length; i++) {
+                        var seq = apiRes.error.sequence[i].seq;
+                        var errMsg = apiRes.error.sequence[i].errMsg;
+
+                        sync.await(oracle.updateFtpFileListErrMsg(seq, cdSite, errMsg, sync.defer()));
+                    }
+                }
+
                 apiCallCount++;
             } while (apiRes.success == 'false' && apiCallCount < 2);           
             
@@ -111,6 +123,7 @@ router.post('/updateBatchPoMlExport', function (req, res) {
             var data = req.body.data;
             var saveData = '[';
             var typoData = req.body.typoData;
+            var numTypoData = req.body.numTypoData;
             var docTopType = req.body.docTopType;
             var returnJson;
             //var exportData = sync.await(oracle.selectSingleBatchPoMlExportFromFilePath(filePath, sync.defer()));
@@ -143,6 +156,9 @@ router.post('/updateBatchPoMlExport', function (req, res) {
             }
             saveData = saveData.slice(0, -1);
             saveData += ']';
+            if (numTypoData.length > 0) {
+                sync.await(oracle.insertNumTypo(numTypoData, docTopType, sync.defer()));
+            }
             sync.await(oracle.insertIcrSymspell(typoData, docTopType, sync.defer()));
             sync.await(oracle.updateBatchPoMlExport(filePath, saveData, sync.defer()));
             returnJson = { 'data': saveData };

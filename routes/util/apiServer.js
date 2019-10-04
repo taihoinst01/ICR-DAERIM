@@ -78,7 +78,7 @@ app.post("/reviewRequest", function(req , res){
                         fileNm = fileNm.split(".")[0].substring(0, fileNm.split(".")[0].length-2)+".pdf";
                         console.log(fileNm);
                         // console.log(req.body.data[i].sequence);
-                        var retData = sync.await(oracle.getFtpFileList(fileNm, req.body.data[i].sequence, sync.defer()));
+                        var retData = sync.await(oracle.getFtpFileList(fileNm, req.body.data[i].sequence, req.body.data[i].cdSite, sync.defer()));
                         console.log(retData);
                         if(retData.length < 1)
                         {
@@ -92,7 +92,8 @@ app.post("/reviewRequest", function(req , res){
                         }
                         else
                         {
-                            var result = sync.await(oracle.updateFtpFileList(fileNm, req.body.data[i].sequence,req.body.data[i].bigo, sync.defer()));
+                            var result = sync.await(oracle.updateFtpFileList(fileNm, req.body.data[i].sequence, req.body.data[i].cdSite,
+                                 req.body.data[i].bigo, req.body.data[i].ivgtrNoSral, req.body.data[i].ivgtrDate, req.body.data[i].ivgtrName, sync.defer()));
                             console.log(result);
                             if(result = 1)
                             {

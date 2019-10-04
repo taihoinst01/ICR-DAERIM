@@ -4092,7 +4092,25 @@ exports.insertFtpFileListFromUi = function (req, done) {
         try {
             conn = await oracledb.getConnection(dbConfig);
 
-            await conn.execute("INSERT INTO TBL_FTP_FILE_LIST(SEQ, FILEPATH, FILENAME) VALUES (SEQ_FTP_FILE_LIST.NEXTVAL, :filePath, :fileName)", req);
+            var fileName = req[1];
+            var apiSiteCD = fileName.split("_")[0];
+            var apiSeq = "";
+            if ( apiSiteCD.lastIndexOf(".") > 0 ) {
+                apiSiteCD = apiSiteCD.split(".")[0];
+            }
+
+            var res = await conn.execute("SELECT MAX(API_SEQ) AS API_SEQ FROM TBL_FTP_FILE_LIST WHERE API_SITE_CD = :api_site_cd ORDER BY SEQ DESC", [apiSiteCD]);
+
+            if (res.rows[0]["API_SEQ"] == null) {
+                apiSeq = 1;
+            } else {
+                apiSeq = res.rows[0]["API_SEQ"];
+                apiSeq = Number(apiSeq) + 1;
+            }
+
+            req.push(apiSeq);
+            req.push(apiSiteCD);
+            await conn.execute("INSERT INTO TBL_FTP_FILE_LIST(SEQ, FILEPATH, FILENAME, API_SEQ, API_SITE_CD) VALUES (SEQ_FTP_FILE_LIST.NEXTVAL, :filePath, :fileName, :apiSeq, :apiSiteCd)", req);
 
             return done(null, null);
         } catch (err) { // catches errors in getConnection and the query
@@ -5132,7 +5150,7 @@ exports.insertFtpFileList = function (path, req, done) {
     });
 };
 
-exports.updateFtpFileList = function (fileNm, fileSeq, bigo, done) {
+exports.updateFtpFileList = function (fileNm, fileSeq, cdSite, bigo, ivgtrNoSral, ivgtrDate, ivgtrName, done) {
     return new Promise(async function (resolve, reject) {
         let conn;
 
@@ -5143,7 +5161,9 @@ exports.updateFtpFileList = function (fileNm, fileSeq, bigo, done) {
              console.log(fileNm+" || "+fileSeq+" || "+bigo) ;
 
             // let query = "INSERT INTO TBL_FTP_FILE_LIST VALUES (SEQ_FTP_FILE_LIST.NEXTVAL, :filePath, :fileName, 'N')";
-            let query = "UPDATE TBL_FTP_FILE_LIST SET RETURNFLAG = 'Y', RETURNTIME = sysdate, ETC = '"+bigo+"' WHERE SEQ = '"+fileSeq+"' AND FILENAME = '"+fileNm+"' ";
+            //let query = "UPDATE TBL_FTP_FILE_LIST SET RETURNFLAG = 'Y', RETURNTIME = sysdate, ETC = '"+bigo+"' WHERE SEQ = '"+fileSeq+"' AND FILENAME = '"+fileNm+"' ";
+            let query = "UPDATE TBL_FTP_FILE_LIST SET RETURNFLAG = 'Y', RETURNTIME = sysdate, ETC = '"+bigo+"', IVGTRNOSRAL = '"+ivgtrNoSral+"', IVGTRDATE = '"+ivgtrDate+"', "
+            + "IVGTRNAME = '"+ivgtrName+"' WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' AND FILENAME = '"+fileNm+"' ";
             // for (var i in req) 
             let result = await conn.execute(query);
             console.log(result);
@@ -5164,8 +5184,32 @@ exports.updateFtpFileList = function (fileNm, fileSeq, bigo, done) {
     });
 };
 
+exports.updateFtpFileListErrMsg = function (fileSeq, cdSite, errMsg, done) {
+    return new Promise(async function (resolve, reject) {
+        let conn;
 
-exports.getFtpFileList = function (fileNm,fileSeq, done) {
+        try {
+            conn = await oracledb.getConnection(dbConfig);
+
+            let query = "UPDATE TBL_FTP_FILE_LIST SET ERRMSG = '"+errMsg+"' WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' ";
+            let result = await conn.execute(query);
+            return done(null, result.rowsAffected);
+        } catch (err) { // catches errors in getConnection and the query
+            reject(err);
+        } finally {
+            if (conn) {   // the conn assignment worked, must release
+                try {
+                    await conn.release();
+                } catch (e) {
+                    console.error(e);
+                    return done(null, e);
+                }
+            }
+        }
+    });
+};
+
+exports.getFtpFileList = function (fileNm, fileSeq, cdSite, done) {
     return new Promise(async function (resolve, reject) {
         let conn;
 
@@ -5176,7 +5220,8 @@ exports.getFtpFileList = function (fileNm,fileSeq, done) {
             console.log(fileNm+" || "+fileSeq);
 
             // let query = "INSERT INTO TBL_FTP_FILE_LIST VALUES (SEQ_FTP_FILE_LIST.NEXTVAL, :filePath, :fileName, 'N')";
-            let query = "SELECT SEQ,FILENAME, FILEPATH FROM TBL_FTP_FILE_LIST  WHERE SEQ = '"+fileSeq+"' AND FILENAME = '"+fileNm+"' ";
+            //let query = "SELECT SEQ,FILENAME, FILEPATH FROM TBL_FTP_FILE_LIST  WHERE SEQ = '"+fileSeq+"' AND FILENAME = '"+fileNm+"' ";
+            let query = "SELECT SEQ,FILENAME, FILEPATH FROM TBL_FTP_FILE_LIST  WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' AND FILENAME = '"+fileNm+"' ";
             // for (var i in req) 
             let result = await conn.execute(query);
             console.log(result);
@@ -5204,13 +5249,13 @@ exports.selectBatchPoMlExport = function (req, pagingCount, done) {
             conn = await oracledb.getConnection(dbConfig);
             let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC " +
+                "PME.FILENAME, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, " +
                 "(SELECT " +
                     "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
-                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC " +
+                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL " +
                 "FROM " +
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +
@@ -5265,14 +5310,14 @@ exports.selectSingleBatchPoMlExport = function (req, done) {
             conn = await oracledb.getConnection(dbConfig);
             var query = "" +
                 "SELECT " +
-                    "IDT.ENGNM, FFL.SEQ, PME.FILENAME, TO_CHAR(FFL.AUTOSENDTIME, 'YYYYMMDDHH24MISS') AS AUTOSENDTIME, PME.EXPORTDATA " +
+                    "IDT.ENGNM, FFL.SEQ, PME.FILENAME, TO_CHAR(FFL.AUTOSENDTIME, 'YYYYMMDDHH24MISS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.API_SEQ, FFL.API_SITE_CD, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
                 "FROM " +
                     "TBL_ICR_DOC_TOPTYPE IDT, " +
                     "TBL_BATCH_PO_ML_EXPORT PME, " +
                     "(SELECT  " +
                         "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
                         "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
-                        "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC " +
+                        "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL " +
                     "FROM " +
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +
@@ -5383,3 +5428,1253 @@ exports.insertIcrSymspell = function (typoData, docTopType, done) {
         }
     });
 };
+
+exports.insertNumTypo = function (numTypoData, docTopType, done) {
+    return new Promise(async function (resolve, reject) {
+        let conn;
+        let result;
+        try {
+            conn = await oracledb.getConnection(dbConfig);
+            var insRemicon = "INSERT INTO TBL_REMICON_INVOICE_TYPO VALUES(SEQ_REMICON_INVOICE_TYPO.NEXTVAL, :SupplyCompany, :CompanyRegistrationNo,"
+                + ":DeliveryLoc, :RemiconTruckNo, :DepartureTime, :DeliveryVol, :TotalDeliveryVol, :ConcreteType, :MaxCoarseAggregate, :NominalStrength,"
+                + ":Slump, :CementType, :RemiconTruckOrderNo, :ReceiveCompany, :TargetLabel, :TargetValue)";
+            var insGeneral = "INSERT INTO TBL_GENERAL_INVOICE_TYPO VALUES(SEQ_GENERAL_INVOICE_TYPO.NEXTVAL, :SupplyCompany, :ProductName, :Unit, :Quantity,"
+                + ":ReceiveCompany, :FieldName, :Standard, :DeliveryDate, :TargetLabel, :TargetValue)";
+            var insRebar = "INSERT INTO TBL_REBAR_INVOICE_TYPO VALUES(SEQ_REBAR_INVOICE_TYPO.NEXTVAL, :SupplyCompany, :ProcessName, :DeliveryDate, :ArrivalDate,"
+                + ":InvoiceNumber, :TrukNumber, :ManufactureWeight, :ExtraCharge, :ExtraChargeWeight, :Coupler, :RebarGyung, :DeliveryOrderNo, :TargetLabel, :TargetValue)";            
+            
+            if (docTopType == "58") {
+                for ( var i = 0; i < numTypoData.length; i++) {
+                    var updNum = 1;
+                    var condition = [];
+                    for ( var j = 0; j < numTypoData[i].length; j++) {
+                        var selRemicon = "SELECT * FROM TBL_REMICON_INVOICE_TYPO WHERE 1=1 ";
+
+                        if (numTypoData[i][j]["updText"] != undefined) {
+                            if(j == 5) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["updText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["orgText"], numTypoData[i][9]["orgText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], numTypoData[i][12]["orgText"], numTypoData[i][13]["orgText"], "1", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"] ];   
+                            } else if (j == 6) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["updText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["orgText"], numTypoData[i][9]["orgText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], numTypoData[i][12]["orgText"], numTypoData[i][13]["orgText"], "2", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"] ];
+                            } else if (j == 8) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["updText"], numTypoData[i][9]["orgText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], numTypoData[i][12]["orgText"], numTypoData[i][13]["orgText"], "3", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"] ];
+                            } else if (j == 9) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["orgText"], numTypoData[i][9]["updText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], numTypoData[i][12]["orgText"], numTypoData[i][13]["orgText"], "4", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"] ];
+                            } else if (j == 10) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["orgText"], numTypoData[i][9]["orgText"],
+                                                numTypoData[i][10]["updText"], numTypoData[i][11]["orgText"], numTypoData[i][12]["orgText"], numTypoData[i][13]["orgText"], "5", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"] ];
+                            } else if (j == 12) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["orgText"], numTypoData[i][9]["orgText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], numTypoData[i][12]["updText"], numTypoData[i][13]["orgText"], "6", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"] ];
+                            }
+
+                            for (var k = 0; k < condition.length; k++) {
+                                if(k == 0 && condition[k] != "") {
+                                    selRemicon += " AND SUPPLYCOMPANY = '" + condition[k] + "'";
+                                } else if(k == 1 && condition[k] != "") {
+                                    selRemicon += " AND COMPANYREGISTRATIONNO = '" + condition[k] + "'";
+                                } else if(k == 2 && condition[k] != "") {
+                                    selRemicon += " AND DELIVERYLOC = '" + condition[k] + "'";
+                                } else if(k == 3 && condition[k] != "") {
+                                    selRemicon += " AND REMICONTRUCKNO = '" + condition[k] + "'";
+                                } else if(k == 4 && condition[k] != "") {
+                                    selRemicon += " AND DEPARTURETIME = '" + condition[k] + "'";
+                                } else if(k == 5 && condition[k] != "") {
+                                    selRemicon += " AND DELIVERYVOL = '" + condition[k] + "'";
+                                } else if(k == 6 && condition[k] != "") {
+                                    selRemicon += " AND TOTALDELIVERYVOL = '" + condition[k] + "'";
+                                } else if(k == 7 && condition[k] != "") {
+                                    selRemicon += " AND CONCRETETYPE = '" + condition[k] + "'";
+                                } else if(k == 8 && condition[k] != "") {
+                                    selRemicon += " AND MAXCOARSEAGGREGATE = '" + condition[k] + "'";
+                                } else if(k == 9 && condition[k] != "") {
+                                    selRemicon += " AND NOMINALSTRENGTH = '" + condition[k] + "'";
+                                } else if(k == 10 && condition[k] != "") {
+                                    selRemicon += " AND SLUMP = '" + condition[k] + "'";
+                                } else if(k == 11 && condition[k] != "") {
+                                    selRemicon += " AND CEMENTTYPE = '" + condition[k] + "'";
+                                } else if(k == 12 && condition[k] != "") {
+                                    selRemicon += " AND REMICONTRUCKORDERNO = '" + condition[k] + "'";
+                                } else if(k == 13 && condition[k] != "") {
+                                    selRemicon += " AND RECEIVECOMPANY = '" + condition[k] + "'";
+                                } else if(k == 14 && condition[k] != "") {
+                                    selRemicon += " AND TARGETLABEL = '" + condition[k] + "'";
+                                } else if(k == 15 && condition[k] != "") {
+                                    selRemicon += " AND TARGETVALUE = '" + condition[k] + "'";
+                                }
+                            }
+        
+                            var resSelRemicon = await conn.execute(selRemicon);
+                            
+                            if ( resSelRemicon.rows.length == 0) {
+                                var resInsRemicon = await conn.execute(insRemicon, condition);
+                            }
+                        }
+
+                    }
+
+                }
+
+            } else if (docTopType == "51" || docTopType == "59") {
+                for ( var i = 0; i < numTypoData.length; i++) {
+                    var updNum = 1;
+                    var condition = [];
+                    for ( var j = 0; j < numTypoData[i].length; j++) {
+                        var selGeneral = "SELECT * FROM TBL_GENERAL_INVOICE_TYPO WHERE 1=1 ";
+                        if (numTypoData[i][j]["updText"] != undefined) {
+                            if(j == 3) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["updText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"],  "2", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"]];
+                            } else if (j == 2) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["updText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"],  "1", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"]];
+                            }
+                            
+                            for (var k = 0; k < condition.length; k++) {
+                                if(k == 0 && condition[k] != "") {
+                                    selGeneral += " AND SUPPLYCOMPANY = '" + condition[k] + "'";
+                                } else if(k == 1 && condition[k] != "") {
+                                    selGeneral += " AND PRODUCTNAME = '" + condition[k] + "'";
+                                } else if(k == 2 && condition[k] != "") {
+                                    selGeneral += " AND UNIT = '" + condition[k] + "'";
+                                } else if(k == 3 && condition[k] != "") {
+                                    selGeneral += " AND QUANTITY = '" + condition[k] + "'";
+                                } else if(k == 4 && condition[k] != "") {
+                                    selGeneral += " AND RECEIVECOMPANY = '" + condition[k] + "'";
+                                } else if(k == 5 && condition[k] != "") {
+                                    selGeneral += " AND FIELDNAME = '" + condition[k] + "'";
+                                } else if(k == 6 && condition[k] != "") {
+                                    selGeneral += " AND STANDARD = '" + condition[k] + "'";
+                                } else if(k == 7 && condition[k] != "") {
+                                    selGeneral += " AND DELIVERYDATE = '" + condition[k] + "'";
+                                } else if(k == 8 && condition[k] != "") {
+                                    selGeneral += " AND TARGETLABEL = '" + condition[k] + "'";
+                                } else if(k == 9 && condition[k] != "") {
+                                    selGeneral += " AND TARGETVALUE = '" + condition[k] + "'";
+                                }
+                            }
+        
+                            var resSelGeneral = await conn.execute(selGeneral);
+                            
+                            if ( resSelGeneral.rows.length == 0) {
+                                var resInsGeneral = await conn.execute(insGeneral, condition);
+                            }
+                        }
+                        
+                    }
+
+                    
+                }
+                
+            } else if (docTopType == "61") {
+                for ( var i = 0; i < numTypoData.length; i++) {
+                    var updNum = 1;
+                    var condition = [];
+                    for ( var j = 0; j < numTypoData[i].length; j++) {
+                        var selRebar = "SELECT * FROM TBL_REBAR_INVOICE_TYPO WHERE 1=1 ";
+                        if (numTypoData[i][j]["updText"] != undefined) {
+                            if(j == 6) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["updText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["orgText"], numTypoData[i][9]["orgText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], "1", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"] ];
+                            }else if(j == 7) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["updText"], numTypoData[i][8]["orgText"], numTypoData[i][9]["orgText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], "2", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"]];
+                            }else if(j == 8) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["updText"], numTypoData[i][9]["orgText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], "3", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"]];
+                            }else if(j == 9) {
+                                condition = [numTypoData[i][0]["orgText"], numTypoData[i][1]["orgText"], numTypoData[i][2]["orgText"], numTypoData[i][3]["orgText"], numTypoData[i][4]["orgText"],
+                                                numTypoData[i][5]["orgText"], numTypoData[i][6]["orgText"], numTypoData[i][7]["orgText"], numTypoData[i][8]["orgText"], numTypoData[i][9]["updText"],
+                                                numTypoData[i][10]["orgText"], numTypoData[i][11]["orgText"], "4", numTypoData[i][j]["orgText"] == ""?"0":numTypoData[i][j]["orgText"]];
+                            }
+                            updNum += 1;
+
+                            for (var k = 0; k < condition.length; k++) {
+                                if(k == 0 && condition[k] != "") {
+                                    selRebar += " AND SUPPLYCOMPANY = '" + condition[k] + "'";
+                                } else if(k == 1 && condition[k] != "") {
+                                    selRebar += " AND PROCESSNAME = '" + condition[k] + "'";
+                                } else if(k == 2 && condition[k] != "") {
+                                    selRebar += " AND DELIVERYDATE = '" + condition[k] + "'";
+                                } else if(k == 3 && condition[k] != "") {
+                                    selRebar += " AND ARRIVALDATE = '" + condition[k] + "'";
+                                } else if(k == 4 && condition[k] != "") {
+                                    selRebar += " AND INVOICENUMBER = '" + condition[k] + "'";
+                                } else if(k == 5 && condition[k] != "") {
+                                    selRebar += " AND TRUKNUMBER = '" + condition[k] + "'";
+                                } else if(k == 6 && condition[k] != "") {
+                                    selRebar += " AND MANUFACTUREWEIGHT = '" + condition[k] + "'";
+                                } else if(k == 7 && condition[k] != "") {
+                                    selRebar += " AND EXTRACHARGE = '" + condition[k] + "'";
+                                } else if(k == 8 && condition[k] != "") {
+                                    selRebar += " AND EXTRACHARGEWEIGHT = '" + condition[k] + "'";
+                                } else if(k == 9 && condition[k] != "") {
+                                    selRebar += " AND COUPLER = '" + condition[k] + "'";
+                                } else if(k == 10 && condition[k] != "") {
+                                    selRebar += " AND REBARGYUNG = '" + condition[k] + "'";
+                                } else if(k == 11 && condition[k] != "") {
+                                    selRebar += " AND DELIVERYORDERNO = '" + condition[k] + "'";
+                                } else if(k == 12 && condition[k] != "") {
+                                    selRebar += " AND TARGETLABEL = '" + condition[k] + "'";
+                                } else if(k == 13 && condition[k] != "") {
+                                    selRebar += " AND TARGETLABEL = '" + condition[k] + "'";
+                                }
+                            }
+        
+                            var resSelRebar = await conn.execute(selRebar);
+                            
+                            if ( resSelRebar.rows.length == 0) {
+                                var resInsGeneral = await conn.execute(insRebar, condition);
+                            }
+
+                        }
+                        
+                    }
+
+                }
+            }
+         
+            return done(null, null);
+        } catch (err) { // catches errors in getConnection and the query
+            reject(err);
+        } finally {
+            if (conn) {   // the conn assignment worked, must release
+                try {
+                    await conn.release();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+    });
+};
+
+exports.selectNumTypo = function (req, labelDef, done) {
+    return new Promise(async function (resolve, reject) {
+        let conn;
+        let result;
+        try {
+            conn = await oracledb.getConnection(dbConfig);
+
+            var selRemicon = "SELECT * FROM TBL_REMICON_INVOICE_TYPO WHERE 1=1 ";
+            var selGeneral = "SELECT * FROM TBL_GENERAL_INVOICE_TYPO WHERE 1=1 ";
+            var selRebar = "SELECT * FROM TBL_REBAR_INVOICE_TYPO WHERE 1=1 ";
+            var docTopType = req.docCategory.DOCTOPTYPE;
+            var updText = [];
+
+            if (docTopType == "51") {
+                var multiEntryInfo = getMultiLabelYLoc(req, labelDef);
+                console.log("multiEntryInfo : " + multiEntryInfo);
+
+                for (var i = 0; i < multiEntryInfo['maxNum']; i++) {
+                    var generalObj = {"505":"N", "506":"N"};
+                    var iLoc =  multiEntryInfo['maxLabel'][i]['location'].split(",");
+                    var data = [];
+                    for (var j = 0; j < req.data.length; j++) {
+                        if (req.data[j]['entryLbl'] != undefined) {
+                            for (var k = 0; k < labelDef.rows.length; k++) {
+                                if (req.data[j]['entryLbl'] == labelDef.rows[k]['SEQNUM'] && labelDef.rows[k]['AMOUNT'] == 'single') {
+                                    data.push(req.data[j]);
+                                } else if (req.data[j]['entryLbl'] == labelDef.rows[k]['SEQNUM'] && labelDef.rows[k]['AMOUNT'] == 'multi'){
+                                    var jLoc = req.data[j]['location'].split(",");
+                                    if ( Math.abs(Number(iLoc[1]) - Number(jLoc[1])) < 20 ) {
+                                        data.push(req.data[j]);
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+
+                    var obj = {};
+                    var location = "";
+                    for (var k = 0; k < data.length; k++) {
+                        var entryNum = data[k]['entryLbl'];
+
+                        if(entryNum == "504" || entryNum == "505" || entryNum == "543") {
+                            location = data[k]['location'].split(",");
+                        }
+
+                        if (obj[entryNum] == undefined) {
+                            obj[entryNum] = data[k]['text'];
+                        }else {
+                            obj[entryNum] += data[k]['text'];
+                        }
+                    }
+                    
+                    for (var j = 0; j < data.length; j++) {
+                        if (data[j]['entryLbl'] == "506") {
+                            
+                            for ( key in obj) {
+                                if (key == "502") {
+                                    selGeneral += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                } else if (key == "504") {
+                                    selGeneral += " AND PRODUCTNAME = '" + obj[key] +"' ";
+                                } else if (key == "505") {
+                                    selGeneral += " AND UNIT = '" + obj[key] +"' ";
+                                } else if (key == "540") {
+                                    selGeneral += " AND RECEIVECOMPANY = '" + obj[key] +"' ";
+                                } else if (key == "541") {
+                                    selGeneral += " AND FIELDNAME = '" + obj[key] +"' ";
+                                } else if (key == "543") {
+                                    selGeneral += " AND STANDARD = '" + obj[key] +"' ";
+                                } else if (key == "812") {
+                                    selGeneral += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                }
+                            }
+                            selGeneral += " AND TARGETLABEL = '2' ";
+                            selGeneral += " AND TARGETVALUE = '" + data[j]['text'] +"' ";
+
+                            var resGeneral = await conn.execute(selGeneral);
+
+                            if (resGeneral.rows.length > 0) {
+                            
+                                for ( var l = 0; l < req.data.length; l++) {
+                                    if (req.data[l] == data[j]) {
+                                        req.data[l]['text'] = resGeneral.rows[0]['QUANTITY'];
+                                    }
+                                }
+                            }
+                            generalObj["506"] = "Y";
+                        } else if (data[j]['entryLbl'] == "505") {
+                            for ( key in obj) {
+                                if (key == "502") {
+                                    selGeneral += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                } else if (key == "504") {
+                                    selGeneral += " AND PRODUCTNAME = '" + obj[key] +"' ";
+                                } else if (key == "506") {
+                                    selGeneral += " AND QUANTITY = '" + obj[key] +"' ";
+                                } else if (key == "540") {
+                                    selGeneral += " AND RECEIVECOMPANY = '" + obj[key] +"' ";
+                                } else if (key == "541") {
+                                    selGeneral += " AND FIELDNAME = '" + obj[key] +"' ";
+                                } else if (key == "543") {
+                                    selGeneral += " AND STANDARD = '" + obj[key] +"' ";
+                                } else if (key == "812") {
+                                    selGeneral += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                }
+                            }
+                            selGeneral += " AND TARGETLABEL = '1' ";
+                            selGeneral += " AND TARGETVALUE = '" + data[j]['text'] +"' ";
+
+                            var resGeneral = await conn.execute(selGeneral);
+
+                            if (resGeneral.rows.length > 0) {
+                            
+                                for ( var l = 0; l < req.data.length; l++) {
+                                    if (req.data[l] == data[j]) {
+                                        req.data[l]['text'] = resGeneral.rows[0]['UNIT'];
+                                    }
+                                }
+                            }
+                            generalObj["505"] = "Y";
+                        }
+
+                        selGeneral = "SELECT * FROM TBL_GENERAL_INVOICE_TYPO WHERE 1=1 ";
+                    } 
+
+                    for (generalKey in generalObj) {
+                        if (generalObj[generalKey] == "N") {
+                            if( generalKey == "505") {
+                                for ( key in obj) {
+                                    if (key == "502") {
+                                        selGeneral += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                    } else if (key == "504") {
+                                        selGeneral += " AND PRODUCTNAME = '" + obj[key] +"' ";
+                                    } else if (key == "506") {
+                                        selGeneral += " AND QUANTITY = '" + obj[key] +"' ";
+                                    } else if (key == "540") {
+                                        selGeneral += " AND RECEIVECOMPANY = '" + obj[key] +"' ";
+                                    } else if (key == "541") {
+                                        selGeneral += " AND FIELDNAME = '" + obj[key] +"' ";
+                                    } else if (key == "543") {
+                                        selGeneral += " AND STANDARD = '" + obj[key] +"' ";
+                                    } else if (key == "812") {
+                                        selGeneral += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                    }
+                                }
+                                selGeneral += " AND TARGETLABEL = '1' ";
+                                selGeneral += " AND TARGETVALUE = '0' ";
+        
+                                var resGeneral = await conn.execute(selGeneral);
+        
+                                if (resGeneral.rows.length > 0) {
+                                    var insLoc = "10," + location[1] + "," + location[2] + "," + location[3];
+                                    req.data.push({"location":insLoc, "text":resGeneral.rows[0]['UNIT'], "entryLbl":generalKey});
+                                }
+                            } else if( generalKey == "506" ) {
+                                for ( key in obj) {
+                                    if (key == "502") {
+                                        selGeneral += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                    } else if (key == "504") {
+                                        selGeneral += " AND PRODUCTNAME = '" + obj[key] +"' ";
+                                    } else if (key == "505") {
+                                        selGeneral += " AND UNIT = '" + obj[key] +"' ";
+                                    } else if (key == "540") {
+                                        selGeneral += " AND RECEIVECOMPANY = '" + obj[key] +"' ";
+                                    } else if (key == "541") {
+                                        selGeneral += " AND FIELDNAME = '" + obj[key] +"' ";
+                                    } else if (key == "543") {
+                                        selGeneral += " AND STANDARD = '" + obj[key] +"' ";
+                                    } else if (key == "812") {
+                                        selGeneral += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                    }
+                                }
+                                selGeneral += " AND TARGETLABEL = '2' ";
+                                selGeneral += " AND TARGETVALUE = '0' ";
+        
+                                var resGeneral = await conn.execute(selGeneral);
+        
+                                if (resGeneral.rows.length > 0) {
+                                    var insLoc = "10," + location[1] + "," + location[2] + "," + location[3];
+                                    req.data.push({"location":insLoc, "text":resGeneral.rows[0]['QUANTITY'], "entryLbl":generalKey});
+                                }
+                            }
+                            selGeneral = "SELECT * FROM TBL_GENERAL_INVOICE_TYPO WHERE 1=1 ";
+                        }
+                    }
+                }
+
+            } else if (docTopType == "59") {
+                for (var i = 0; i < req.data.length; i++) {
+                    if (req.data[i]['entryLbl'] == '816') {
+                        selGeneral += " AND SUPPLYCOMPANY = '" + req.data[i]['text'] +"' ";
+                    } else if (req.data[i]['entryLbl'] == '817') {
+                        selGeneral += " AND PRODUCTNAME = '" + req.data[i]['text'] +"' ";
+                    } else if (req.data[i]['entryLbl'] == '818') {
+                        selGeneral += " AND UNIT = '" + req.data[i]['text'] +"' ";
+                    } else if (req.data[i]['entryLbl'] == '820') {
+                        selGeneral += " AND RECEIVECOMPANY = '" + req.data[i]['text'] +"' ";
+                    } else if (req.data[i]['entryLbl'] == '821') {
+                        selGeneral += " AND FIELDNAME = '" + req.data[i]['text'] +"' ";
+                    } else if (req.data[i]['entryLbl'] == '822') {
+                        selGeneral += " AND STANDARD = '" + req.data[i]['text'] +"' ";
+                    } else if (req.data[i]['entryLbl'] == '823') {
+                        selGeneral += " AND DELIVERYDATE = '" + req.data[i]['text'] +"' ";
+                    } else if (req.data[i]['entryLbl'] == '819') {
+                        selGeneral += " AND TARGETLABEL = '1' ";
+                        selGeneral += " AND TARGETVALUE = '" + req.data[i]['text'] +"' ";
+                    }
+                }
+
+                var resGeneral = await conn.execute(selGeneral);
+
+                if (resGeneral.rows.length > 0) {
+                
+                    for ( var l = 0; l < req.data.length; l++) {
+                        if (req.data[l]['entryLbl'] == "819") {
+                            req.data[l]['text'] = resGeneral.rows[0]['QUANTITY'];
+                        }
+                    }
+                }
+
+
+            } else if (docTopType == "58") {
+                var remiconObj = {"767":"N","768":"N","770":"N","771":"N","772":"N","792":"N"};
+
+                for (var i = 0; i < req.data.length; i++) {
+                    if (req.data[i]['entryLbl'] == "760") {
+                        selRemicon += " AND SUPPLYCOMPANY = '" + req.data[i]['text'] + "'";
+                    } else if (req.data[i]['entryLbl'] == "761") {
+                        selRemicon += " AND COMPANYREGISTRATIONNO = '" + req.data[i]['text'] + "'";
+                    } else if (req.data[i]['entryLbl'] == "764") {
+                        selRemicon += " AND DELIVERYLOC = '" + req.data[i]['text'] + "'";
+                    } else if (req.data[i]['entryLbl'] == "765") {
+                        selRemicon += " AND REMICONTRUCKNO = '" + req.data[i]['text'] + "'";
+                    } else if (req.data[i]['entryLbl'] == "766") {
+                        selRemicon += " AND DEPARTURETIME = '" + req.data[i]['text'] + "'";
+                    } else if (req.data[i]['entryLbl'] == "769") {
+                        selRemicon += " AND CONCRETETYPE = '" + req.data[i]['text'] + "'";
+                    } else if (req.data[i]['entryLbl'] == "773") {
+                        selRemicon += " AND CEMENTTYPE = '" + req.data[i]['text'] + "'";
+                    } else if (req.data[i]['entryLbl'] == "852") {
+                        selRemicon += " AND RECEIVECOMPANY = '" + req.data[i]['text'] + "'";
+                    }
+                }
+
+                for (var i = 0; i < req.data.length; i++) {
+
+                    //납풉용적
+                    if ( req.data[i]['entryLbl'] == "767" ) {
+
+                        for( var j = 0; j < req.data.length; j++) {
+                            if(req.data[j]['entryLbl'] == "768") {
+                                selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "770") {
+                                selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "771") {
+                                selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "772") {
+                                selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "792") {
+                                selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                            }
+                        }
+
+                        selRemicon += " AND TARGETLABEL = '1' ";
+                        selRemicon += " AND TARGETVALUE = '" + req.data[i]['text'] + "'";
+
+                        var resRemicon = await conn.execute(selRemicon);
+
+                        if (resRemicon.rows.length > 0) {
+                            var chgObj = {};
+                            var location = req.data[i]['location'];
+                            var chgText = resRemicon.rows[0]['DELIVERYVOL'];
+                            chgObj[location] = chgText;
+                            updText.push(chgObj);
+                        }
+                        
+                        remiconObj["767"] = "Y";
+
+                    //누계
+                    } else if ( req.data[i]['entryLbl'] == "768" ) {
+
+                        for( var j = 0; j < req.data.length; j++) {
+                            if(req.data[j]['entryLbl'] == "767") {
+                                selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "770") {
+                                selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "771") {
+                                selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "772") {
+                                selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "792") {
+                                selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                            }
+                        }
+
+                        selRemicon += " AND TARGETLABEL = '2' ";
+                        selRemicon += " AND TARGETVALUE = '" + req.data[i]['text'] + "'";
+
+                        var resRemicon = await conn.execute(selRemicon);
+
+                        if (resRemicon.rows.length > 0) {
+                            var chgObj = {};
+                            var location = req.data[i]['location'];
+                            var chgText = resRemicon.rows[0]['TOTALDELIVERYVOL'];
+                            chgObj[location] = chgText;
+                            updText.push(chgObj);
+                        }
+
+                        remiconObj["768"] = "Y";
+
+                    //굵은골재 최대 치수
+                    } else if ( req.data[i]['entryLbl'] == "770" ) {
+                        for( var j = 0; j < req.data.length; j++) {
+                            if(req.data[j]['entryLbl'] == "767") {
+                                selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "768") {
+                                selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "771") {
+                                selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "772") {
+                                selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "792") {
+                                selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                            }
+                        }
+
+                        selRemicon += " AND TARGETLABEL = '3' ";
+                        selRemicon += " AND TARGETVALUE = '" + req.data[i]['text'] + "'";
+
+                        var resRemicon = await conn.execute(selRemicon);
+
+                        if (resRemicon.rows.length > 0) {
+                            var chgObj = {};
+                            var location = req.data[i]['location'];
+                            var chgText = resRemicon.rows[0]['MAXCOARSEAGGREGATE'];
+                            chgObj[location] = chgText;
+                            updText.push(chgObj);
+                        }
+
+                        remiconObj["770"] = "Y";
+                    //호칭강도
+                    } else if ( req.data[i]['entryLbl'] == "771" ) {
+                        for( var j = 0; j < req.data.length; j++) {
+                            if(req.data[j]['entryLbl'] == "767") {
+                                selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "770") {
+                                selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "768") {
+                                selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "772") {
+                                selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "792") {
+                                selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                            }
+                        }
+
+                        selRemicon += " AND TARGETLABEL = '4' ";
+                        selRemicon += " AND TARGETVALUE = '" + req.data[i]['text'] + "'";
+
+                        var resRemicon = await conn.execute(selRemicon);
+
+                        if (resRemicon.rows.length > 0) {
+                            var chgObj = {};
+                            var location = req.data[i]['location'];
+                            var chgText = resRemicon.rows[0]['NOMINALSTRENGTH'];
+                            chgObj[location] = chgText;
+                            updText.push(chgObj);
+                        }
+
+                        remiconObj["771"] = "Y";
+                    //슬럼프
+                    } else if ( req.data[i]['entryLbl'] == "772" ) {
+                        for( var j = 0; j < req.data.length; j++) {
+                            if(req.data[j]['entryLbl'] == "767") {
+                                selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "770") {
+                                selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "771") {
+                                selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "768") {
+                                selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "792") {
+                                selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                            }
+                        }
+
+                        selRemicon += " AND TARGETLABEL = '5' ";
+                        selRemicon += " AND TARGETVALUE = '" + req.data[i]['text'] + "'";
+
+                        var resRemicon = await conn.execute(selRemicon);
+
+                        if (resRemicon.rows.length > 0) {
+                            var chgObj = {};
+                            var location = req.data[i]['location'];
+                            var chgText = resRemicon.rows[0]['SLUMP'];
+                            chgObj[location] = chgText;
+                            updText.push(chgObj);
+                        }
+                        remiconObj["772"] = "Y";
+                    //운반차순서
+                    } else if ( req.data[i]['entryLbl'] == "792" ) {
+                        for( var j = 0; j < req.data.length; j++) {
+                            if(req.data[j]['entryLbl'] == "767") {
+                                selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "770") {
+                                selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "771") {
+                                selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "772") {
+                                selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                            } else if(req.data[j]['entryLbl'] == "768") {
+                                selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                            }
+                        }
+
+                        selRemicon += " AND TARGETLABEL = '6' ";
+                        selRemicon += " AND TARGETVALUE = '" + req.data[i]['text'] + "'";
+
+                        var resRemicon = await conn.execute(selRemicon);
+
+                        if (resRemicon.rows.length > 0) {
+                            var chgObj = {};
+                            var location = req.data[i]['location'];
+                            var chgText = resRemicon.rows[0]['REMICONTRUCKORDERNO'];
+                            chgObj[location] = chgText;
+                            updText.push(chgObj);
+                        }
+
+                        remiconObj["792"] = "Y";
+                    }
+
+                    selRemicon = "SELECT * FROM TBL_REMICON_INVOICE_TYPO WHERE 1=1 ";
+                }
+
+                var insText = [];
+                for (var key in remiconObj) {
+                    if (remiconObj[key] == "N") {
+                        if(key == "767") {
+                            for( var j = 0; j < req.data.length; j++) {
+                                if(req.data[j]['entryLbl'] == "768") {
+                                    selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "770") {
+                                    selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "771") {
+                                    selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "772") {
+                                    selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "792") {
+                                    selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                                }
+                            }
+    
+                            selRemicon += " AND TARGETLABEL = '1' ";
+                            selRemicon += " AND TARGETVALUE = '0' ";
+    
+                            var resRemicon = await conn.execute(selRemicon);
+    
+                            if (resRemicon.rows.length > 0) {
+                                insText.push({"location":"30,30,30,30", "text":resRemicon.rows[0]['DELIVERYVOL'], "entryLbl":key});
+                            }
+                        } else if(key == "768") {
+                            for( var j = 0; j < req.data.length; j++) {
+                                if(req.data[j]['entryLbl'] == "767") {
+                                    selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "770") {
+                                    selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "771") {
+                                    selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "772") {
+                                    selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "792") {
+                                    selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                                }
+                            }
+    
+                            selRemicon += " AND TARGETLABEL = '2' ";
+                            selRemicon += " AND TARGETVALUE = '0' ";
+    
+                            var resRemicon = await conn.execute(selRemicon);
+    
+                            if (resRemicon.rows.length > 0) {
+                                insText.push({"location":"30,30,30,30", "text":resRemicon.rows[0]['TOTALDELIVERYVOL'], "entryLbl":key});
+                            }
+
+                        } else if(key == "770") {
+                            for( var j = 0; j < req.data.length; j++) {
+                                if(req.data[j]['entryLbl'] == "767") {
+                                    selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "768") {
+                                    selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "771") {
+                                    selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "772") {
+                                    selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "792") {
+                                    selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                                }
+                            }
+    
+                            selRemicon += " AND TARGETLABEL = '3' ";
+                            selRemicon += " AND TARGETVALUE = '0' ";
+    
+                            var resRemicon = await conn.execute(selRemicon);
+    
+                            if (resRemicon.rows.length > 0) {
+                                insText.push({"location":"30,30,30,30", "text":resRemicon.rows[0]['MAXCOARSEAGGREGATE'], "entryLbl":key});
+                            }
+
+                        } else if(key == "771") {
+                            for( var j = 0; j < req.data.length; j++) {
+                                if(req.data[j]['entryLbl'] == "767") {
+                                    selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "770") {
+                                    selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "768") {
+                                    selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "772") {
+                                    selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "792") {
+                                    selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                                }
+                            }
+    
+                            selRemicon += " AND TARGETLABEL = '4' ";
+                            selRemicon += " AND TARGETVALUE = '0'";
+    
+                            var resRemicon = await conn.execute(selRemicon);
+    
+                            if (resRemicon.rows.length > 0) {
+                                insText.push({"location":"30,30,30,30", "text":resRemicon.rows[0]['NOMINALSTRENGTH'], "entryLbl":key});
+                            }
+                        } else if(key == "772") {
+                            for( var j = 0; j < req.data.length; j++) {
+                                if(req.data[j]['entryLbl'] == "767") {
+                                    selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "770") {
+                                    selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "771") {
+                                    selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "768") {
+                                    selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "792") {
+                                    selRemicon += " AND REMICONTRUCKORDERNO = '" + req.data[j]['text'] + "'";
+                                }
+                            }
+    
+                            selRemicon += " AND TARGETLABEL = '5' ";
+                            selRemicon += " AND TARGETVALUE = '0' ";
+    
+                            var resRemicon = await conn.execute(selRemicon);
+    
+                            if (resRemicon.rows.length > 0) {
+                                insText.push({"location":"30,30,30,30", "text":resRemicon.rows[0]['SLUMP'], "entryLbl":key});
+                            }
+                        } else if(key == "792") {
+                            for( var j = 0; j < req.data.length; j++) {
+                                if(req.data[j]['entryLbl'] == "767") {
+                                    selRemicon += " AND DELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "770") {
+                                    selRemicon += " AND MAXCOARSEAGGREGATE = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "771") {
+                                    selRemicon += " AND NOMINALSTRENGTH = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "772") {
+                                    selRemicon += " AND SLUMP = '" + req.data[j]['text'] + "'";
+                                } else if(req.data[j]['entryLbl'] == "768") {
+                                    selRemicon += " AND TOTALDELIVERYVOL = '" + req.data[j]['text'] + "'";
+                                }
+                            }
+    
+                            selRemicon += " AND TARGETLABEL = '6' ";
+                            selRemicon += " AND TARGETVALUE = '0' ";
+    
+                            var resRemicon = await conn.execute(selRemicon);
+    
+                            if (resRemicon.rows.length > 0) {
+                                insText.push({"location":"30,30,30,30", "text":resRemicon.rows[0]['REMICONTRUCKORDERNO'], "entryLbl":key});
+                            }
+                        }
+
+                        selRemicon = "SELECT * FROM TBL_REMICON_INVOICE_TYPO WHERE 1=1 ";
+
+                    }
+                }                
+
+                for (var i = 0; i < req.data.length; i++) {
+                    for ( var j = 0; j < updText.length; j++) {
+                        if( req.data[i]['location'] == Object.keys(updText[j])[0]) {
+                            req.data[i]['text'] = Object.values(updText[j])[0];
+                        }
+                    }
+                }
+
+                for (var i = 0; i < insText.length; i++) {
+                    req.data.push(insText[i]);
+                }
+
+
+            } else if (docTopType == "61") {
+                var multiEntryInfo = getMultiLabelYLoc(req, labelDef);
+                console.log("multiEntryInfo : " + multiEntryInfo);
+
+                for (var i = 0; i < multiEntryInfo['maxNum']; i++) {
+                    var iLoc =  multiEntryInfo['maxLabel'][i]['location'].split(",");
+                    var data = [];
+                    for (var j = 0; j < req.data.length; j++) {
+                        if (req.data[j]['entryLbl'] != undefined) {
+                            for (var k = 0; k < labelDef.rows.length; k++) {
+                                if (req.data[j]['entryLbl'] == labelDef.rows[k]['SEQNUM'] && labelDef.rows[k]['AMOUNT'] == 'single') {
+                                    data.push(req.data[j]);
+                                } else if (req.data[j]['entryLbl'] == labelDef.rows[k]['SEQNUM'] && labelDef.rows[k]['AMOUNT'] == 'multi'){
+                                    var jLoc = req.data[j]['location'].split(",");
+                                    if ( Math.abs(Number(iLoc[1]) - Number(jLoc[1])) < 20 ) {
+                                        data.push(req.data[j]);
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                    
+                    var obj = {};
+                    var location = "";
+                    for (var k = 0; k < data.length; k++) {
+                        var entryNum = data[k]['entryLbl'];
+
+                        if (entryNum == "877" || entryNum == "878" || entryNum == "879" || entryNum == "880"){
+                            location = data[k]['location'];
+                        }
+
+                        if (obj[entryNum] == undefined) {
+                            obj[entryNum] = data[k]['text'];
+                        }else if (obj[entryNum].length == 0){
+                            obj[entryNum] = data[k]['text'];
+                        }
+                        
+                    }
+
+                    var rebarObj = {"877":"N", "878":"N", "879":"N", "880":"N"};
+
+                    for (var j = 0; j < data.length; j++) {
+
+                        if (data[j]['entryLbl'] == "877") {
+
+                            for ( key in obj) {
+                                if (key == "853") {
+                                    selRebar += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                } else if (key == "872") {
+                                    selRebar += " AND PROCESSNAME = '" + obj[key] +"' ";
+                                } else if (key == "873") {
+                                    selRebar += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                } else if (key == "874") {
+                                    selRebar += " AND ARRIVALDATE = '" + obj[key] +"' ";
+                                } else if (key == "875") {
+                                    selRebar += " AND INVOICENUMBER = '" + obj[key] +"' ";
+                                } else if (key == "876") {
+                                    selRebar += " AND TRUKNUMBER = '" + obj[key] +"' ";
+                                } else if (key == "878") {
+                                    selRebar += " AND EXTRACHARGE = '" + obj[key] +"' ";
+                                } else if (key == "879") {
+                                    selRebar += " AND EXTRACHARGEWEIGHT = '" + obj[key] +"' ";
+                                } else if (key == "880") {
+                                    selRebar += " AND COUPLER = '" + obj[key] +"' ";
+                                } else if (key == "883") {
+                                    selRebar += " AND REBARGYUNG = '" + obj[key] +"' ";
+                                } else if (key == "892") {
+                                    selRebar += " AND DELIVERYORDERNO = '" + obj[key] +"' ";
+                                }
+                            }
+                            selRebar += " AND TARGETLABEL = '1' ";
+                            selRebar += " AND TARGETVALUE = '" + data[j]['text'] +"' ";
+
+                            var resRebar = await conn.execute(selRebar);
+
+                            if (resRebar.rows.length > 0) {
+                            
+                                for ( var l = 0; l < req.data.length; l++) {
+                                    if (req.data[l] == data[j]) {
+                                        req.data[l]['text'] = resRebar.rows[0]['MANUFACTUREWEIGHT'];
+                                    }
+                                }
+                            }
+
+                            rebarObj["877"] = "Y";
+                        } else if (data[j]['entryLbl'] == "878") {
+                            for ( key in obj) {
+                                if (key == "853") {
+                                    selRebar += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                } else if (key == "872") {
+                                    selRebar += " AND PROCESSNAME = '" + obj[key] +"' ";
+                                } else if (key == "873") {
+                                    selRebar += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                } else if (key == "874") {
+                                    selRebar += " AND ARRIVALDATE = '" + obj[key] +"' ";
+                                } else if (key == "875") {
+                                    selRebar += " AND INVOICENUMBER = '" + obj[key] +"' ";
+                                } else if (key == "876") {
+                                    selRebar += " AND TRUKNUMBER = '" + obj[key] +"' ";
+                                } else if (key == "877") {
+                                    selRebar += " AND MANUFACTUREWEIGHT = '" + obj[key] +"' ";
+                                } else if (key == "879") {
+                                    selRebar += " AND EXTRACHARGEWEIGHT = '" + obj[key] +"' ";
+                                } else if (key == "880") {
+                                    selRebar += " AND COUPLER = '" + obj[key] +"' ";
+                                } else if (key == "883") {
+                                    selRebar += " AND REBARGYUNG = '" + obj[key] +"' ";
+                                } else if (key == "892") {
+                                    selRebar += " AND DELIVERYORDERNO = '" + obj[key] +"' ";
+                                }
+                            }
+                            selRebar += " AND TARGETLABEL = '2' ";
+                            selRebar += " AND TARGETVALUE = '" + data[j]['text'] +"' ";
+
+                            var resRebar = await conn.execute(selRebar);
+
+                            if (resRebar.rows.length > 0) {
+                            
+                                for ( var l = 0; l < req.data.length; l++) {
+                                    if (req.data[l] == data[j]) {
+                                        req.data[l]['text'] = resRebar.rows[0]['EXTRACHARGE'];
+                                    }
+                                }
+                            }
+
+                            rebarObj["878"] = "N";
+                        } else if (data[j]['entryLbl'] == "879") {
+                            for ( key in obj) {
+                                if (key == "853") {
+                                    selRebar += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                } else if (key == "872") {
+                                    selRebar += " AND PROCESSNAME = '" + obj[key] +"' ";
+                                } else if (key == "873") {
+                                    selRebar += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                } else if (key == "874") {
+                                    selRebar += " AND ARRIVALDATE = '" + obj[key] +"' ";
+                                } else if (key == "875") {
+                                    selRebar += " AND INVOICENUMBER = '" + obj[key] +"' ";
+                                } else if (key == "876") {
+                                    selRebar += " AND TRUKNUMBER = '" + obj[key] +"' ";
+                                } else if (key == "878") {
+                                    selRebar += " AND EXTRACHARGE = '" + obj[key] +"' ";
+                                } else if (key == "877") {
+                                    selRebar += " AND MANUFACTUREWEIGHT = '" + obj[key] +"' ";
+                                } else if (key == "880") {
+                                    selRebar += " AND COUPLER = '" + obj[key] +"' ";
+                                } else if (key == "883") {
+                                    selRebar += " AND REBARGYUNG = '" + obj[key] +"' ";
+                                } else if (key == "892") {
+                                    selRebar += " AND DELIVERYORDERNO = '" + obj[key] +"' ";
+                                }
+                            }
+                            selRebar += " AND TARGETLABEL = '3' ";
+                            selRebar += " AND TARGETVALUE = '" + data[j]['text'] +"' ";
+
+                            var resRebar = await conn.execute(selRebar);
+
+                            if (resRebar.rows.length > 0) {
+                            
+                                for ( var l = 0; l < req.data.length; l++) {
+                                    if (req.data[l] == data[j]) {
+                                        req.data[l]['text'] = resRebar.rows[0]['EXTRACHARGEWEIGHT'];
+                                    }
+                                }
+                            }
+                            rebarObj["879"] = "Y";
+                        } else if (data[j]['entryLbl'] == "880") {
+                            for ( key in obj) {
+                                if (key == "853") {
+                                    selRebar += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                } else if (key == "872") {
+                                    selRebar += " AND PROCESSNAME = '" + obj[key] +"' ";
+                                } else if (key == "873") {
+                                    selRebar += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                } else if (key == "874") {
+                                    selRebar += " AND ARRIVALDATE = '" + obj[key] +"' ";
+                                } else if (key == "875") {
+                                    selRebar += " AND INVOICENUMBER = '" + obj[key] +"' ";
+                                } else if (key == "876") {
+                                    selRebar += " AND TRUKNUMBER = '" + obj[key] +"' ";
+                                } else if (key == "878") {
+                                    selRebar += " AND EXTRACHARGE = '" + obj[key] +"' ";
+                                } else if (key == "879") {
+                                    selRebar += " AND EXTRACHARGEWEIGHT = '" + obj[key] +"' ";
+                                } else if (key == "877") {
+                                    selRebar += " AND MANUFACTUREWEIGHT = '" + obj[key] +"' ";
+                                } else if (key == "883") {
+                                    selRebar += " AND REBARGYUNG = '" + obj[key] +"' ";
+                                } else if (key == "892") {
+                                    selRebar += " AND DELIVERYORDERNO = '" + obj[key] +"' ";
+                                }
+                            }
+                            selRebar += " AND TARGETLABEL = '4' ";
+                            selRebar += " AND TARGETVALUE = '" + data[j]['text'] +"' ";
+
+                            var resRebar = await conn.execute(selRebar);
+
+                            if (resRebar.rows.length > 0) {
+                            
+                                for ( var l = 0; l < req.data.length; l++) {
+                                    if (req.data[l] == data[j]) {
+                                        req.data[l]['text'] = resRebar.rows[0]['COUPLER'];
+                                    }
+                                }
+                            }
+                            rebarObj["880"] = "Y";
+                        }
+
+                        selRebar = "SELECT * FROM TBL_REBAR_INVOICE_TYPO WHERE 1=1 ";
+                    }
+
+                    for ( rebarKey in rebarObj) {
+                        if ( rebarObj[rebarKey] == "N" ) {
+                            if( rebarKey == "877") {
+                                for ( key in obj) {
+                                    if (key == "853") {
+                                        selRebar += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                    } else if (key == "872") {
+                                        selRebar += " AND PROCESSNAME = '" + obj[key] +"' ";
+                                    } else if (key == "873") {
+                                        selRebar += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                    } else if (key == "874") {
+                                        selRebar += " AND ARRIVALDATE = '" + obj[key] +"' ";
+                                    } else if (key == "875") {
+                                        selRebar += " AND INVOICENUMBER = '" + obj[key] +"' ";
+                                    } else if (key == "876") {
+                                        selRebar += " AND TRUKNUMBER = '" + obj[key] +"' ";
+                                    } else if (key == "878") {
+                                        selRebar += " AND EXTRACHARGE = '" + obj[key] +"' ";
+                                    } else if (key == "879") {
+                                        selRebar += " AND EXTRACHARGEWEIGHT = '" + obj[key] +"' ";
+                                    } else if (key == "880") {
+                                        selRebar += " AND COUPLER = '" + obj[key] +"' ";
+                                    } else if (key == "883") {
+                                        selRebar += " AND REBARGYUNG = '" + obj[key] +"' ";
+                                    } else if (key == "892") {
+                                        selRebar += " AND DELIVERYORDERNO = '" + obj[key] +"' ";
+                                    }
+                                }
+                                selRebar += " AND TARGETLABEL = '1' ";
+                                selRebar += " AND TARGETVALUE = '0' ";
+    
+                                var resRebar = await conn.execute(selRebar);
+    
+                                if (resRebar.rows.length > 0) {
+                                    req.data.push({"text":resRebar.rows[0]['MANUFACTUREWEIGHT'], "location":location, "entryLbl":rebarKey});
+                                }
+                            } else if (rebarKey == "878") {
+                                for ( key in obj) {
+                                    if (key == "853") {
+                                        selRebar += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                    } else if (key == "872") {
+                                        selRebar += " AND PROCESSNAME = '" + obj[key] +"' ";
+                                    } else if (key == "873") {
+                                        selRebar += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                    } else if (key == "874") {
+                                        selRebar += " AND ARRIVALDATE = '" + obj[key] +"' ";
+                                    } else if (key == "875") {
+                                        selRebar += " AND INVOICENUMBER = '" + obj[key] +"' ";
+                                    } else if (key == "876") {
+                                        selRebar += " AND TRUKNUMBER = '" + obj[key] +"' ";
+                                    } else if (key == "877") {
+                                        selRebar += " AND MANUFACTUREWEIGHT = '" + obj[key] +"' ";
+                                    } else if (key == "879") {
+                                        selRebar += " AND EXTRACHARGEWEIGHT = '" + obj[key] +"' ";
+                                    } else if (key == "880") {
+                                        selRebar += " AND COUPLER = '" + obj[key] +"' ";
+                                    } else if (key == "883") {
+                                        selRebar += " AND REBARGYUNG = '" + obj[key] +"' ";
+                                    } else if (key == "892") {
+                                        selRebar += " AND DELIVERYORDERNO = '" + obj[key] +"' ";
+                                    }
+                                }
+                                selRebar += " AND TARGETLABEL = '2' ";
+                                selRebar += " AND TARGETVALUE = '0' ";
+    
+                                var resRebar = await conn.execute(selRebar);
+    
+                                if (resRebar.rows.length > 0) {
+                                    req.data.push({"text":resRebar.rows[0]['EXTRACHARGE'], "location":location, "entryLbl":rebarKey});
+                                }
+                            } else if (rebarKey == "879") {
+                                for ( key in obj) {
+                                    if (key == "853") {
+                                        selRebar += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                    } else if (key == "872") {
+                                        selRebar += " AND PROCESSNAME = '" + obj[key] +"' ";
+                                    } else if (key == "873") {
+                                        selRebar += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                    } else if (key == "874") {
+                                        selRebar += " AND ARRIVALDATE = '" + obj[key] +"' ";
+                                    } else if (key == "875") {
+                                        selRebar += " AND INVOICENUMBER = '" + obj[key] +"' ";
+                                    } else if (key == "876") {
+                                        selRebar += " AND TRUKNUMBER = '" + obj[key] +"' ";
+                                    } else if (key == "878") {
+                                        selRebar += " AND EXTRACHARGE = '" + obj[key] +"' ";
+                                    } else if (key == "877") {
+                                        selRebar += " AND MANUFACTUREWEIGHT = '" + obj[key] +"' ";
+                                    } else if (key == "880") {
+                                        selRebar += " AND COUPLER = '" + obj[key] +"' ";
+                                    } else if (key == "883") {
+                                        selRebar += " AND REBARGYUNG = '" + obj[key] +"' ";
+                                    } else if (key == "892") {
+                                        selRebar += " AND DELIVERYORDERNO = '" + obj[key] +"' ";
+                                    }
+                                }
+                                selRebar += " AND TARGETLABEL = '3' ";
+                                selRebar += " AND TARGETVALUE = '0' ";
+    
+                                var resRebar = await conn.execute(selRebar);
+    
+                                if (resRebar.rows.length > 0) {
+                                    req.data.push({"text":resRebar.rows[0]['EXTRACHARGEWEIGHT'], "location":location, "entryLbl":rebarKey});
+                                }
+                            } else if (rebarKey == "880") {
+                                for ( key in obj) {
+                                    if (key == "853") {
+                                        selRebar += " AND SUPPLYCOMPANY = '" + obj[key] +"' ";
+                                    } else if (key == "872") {
+                                        selRebar += " AND PROCESSNAME = '" + obj[key] +"' ";
+                                    } else if (key == "873") {
+                                        selRebar += " AND DELIVERYDATE = '" + obj[key] +"' ";
+                                    } else if (key == "874") {
+                                        selRebar += " AND ARRIVALDATE = '" + obj[key] +"' ";
+                                    } else if (key == "875") {
+                                        selRebar += " AND INVOICENUMBER = '" + obj[key] +"' ";
+                                    } else if (key == "876") {
+                                        selRebar += " AND TRUKNUMBER = '" + obj[key] +"' ";
+                                    } else if (key == "878") {
+                                        selRebar += " AND EXTRACHARGE = '" + obj[key] +"' ";
+                                    } else if (key == "879") {
+                                        selRebar += " AND EXTRACHARGEWEIGHT = '" + obj[key] +"' ";
+                                    } else if (key == "877") {
+                                        selRebar += " AND MANUFACTUREWEIGHT = '" + obj[key] +"' ";
+                                    } else if (key == "883") {
+                                        selRebar += " AND REBARGYUNG = '" + obj[key] +"' ";
+                                    } else if (key == "892") {
+                                        selRebar += " AND DELIVERYORDERNO = '" + obj[key] +"' ";
+                                    }
+                                }
+                                selRebar += " AND TARGETLABEL = '4' ";
+                                selRebar += " AND TARGETVALUE = '0' ";
+    
+                                var resRebar = await conn.execute(selRebar);
+    
+                                if (resRebar.rows.length > 0) {
+                                    req.data.push({"text":resRebar.rows[0]['COUPLER'], "location":location, "entryLbl":rebarKey});
+                                }
+                            }
+                            selRebar = "SELECT * FROM TBL_REBAR_INVOICE_TYPO WHERE 1=1 ";
+                        }
+                    }
+
+                }
+            }
+
+            return done(null, req);
+        } catch (err) { // catches errors in getConnection and the query
+            reject(err);
+        } finally {
+            if (conn) {   // the conn assignment worked, must release
+                try {
+                    await conn.release();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+    });
+};
+
+function getMultiLabelYLoc(req, labelDef) {
+    var ret = labelDef
+    var obj = {};
+    for (var i = 0; i < req.data.length; i++) {
+        if (req.data[i]['entryLbl'] != undefined) {
+            for (var j = 0; j < ret.rows.length; j++) {
+                if (req.data[i]['entryLbl'] == ret.rows[j]['SEQNUM'] && ret.rows[j]['AMOUNT'] == "multi") {
+                    var entryLbl = ret.rows[j]['SEQNUM'];
+                    
+                    if (obj[entryLbl] == undefined) {
+                        obj[entryLbl] = 1;
+                    }else {
+                        obj[entryLbl] += 1;
+                    }
+
+                }
+            }
+        }
+    }
+
+    var maxNum = 0;
+    var max = {};
+    for (var key in obj) {
+        var num = obj[key];
+
+        if (num > maxNum) {
+            max = {'entryLbl': key, 'maxNum': num};
+            maxNum = num;
+        }
+    }
+
+    var data = [];
+    for (var i = 0; i < req.data.length; i++) {
+        if (req.data[i]['entryLbl'] == max['entryLbl']) {
+            data.push(req.data[i]);
+        }
+    }
+
+    max['maxLabel'] = data;
+
+    return max;
+
+}
+
+function pad(n, width) {
+    n = n + '';
+    return n.length >= width ? n : new Array(width - n.length + 1).join('0') + n;
+}
