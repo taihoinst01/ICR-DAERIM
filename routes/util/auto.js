@@ -306,8 +306,10 @@ function processingExportData(mlData, labels, done) {
                 for (var j in mlData) {
                     var item = null;
                     if (mlData[j].entryLbl && labels[i].SEQNUM == mlData[j].entryLbl) {
-                        item = ((entryData == "") ? "" : " | ") + mlData[j].location.split(',')[1] + "::" + mlData[j].text;
-                        entryData += item;
+                        if (mlData[j].text != "") {
+                            item = ((entryData == "") ? "" : " | ") + mlData[j].location.split(',')[1] + "::" + mlData[j].text;
+                            entryData += item;
+                        }
                     }
                 }
                 exportData += ((entryData != "") ? "\"" + entryData.replace(/,/gi,'') + "\"" : null);

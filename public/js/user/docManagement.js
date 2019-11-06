@@ -231,7 +231,7 @@ function appendSingleHTML(docDataList, docTopType) {
     for (var i in docDataList) {
         var mlDataListHTML = '' +
             '<tr class="originalTr">' +
-            '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
+            '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="hidden" value="' + docDataList[i].SEQ + '" name="seqOri" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
             '<td>' +
             '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +')">' +
             '<input type="text" value="' + docDataList[i].FILENAME.substring(docDataList[i].FILENAME.lastIndexOf('/') + 1) + '" class="inputst_box03_15radius fileNameInput" data-originalvalue="' + docDataList[i].FILENAME + '" disabled>' +
@@ -279,7 +279,7 @@ function appendMultiHTML(docLabelList, docDataList, docTopType) {
             if (k == 0) {
                 mlDataListHTML = '' +
                     '<tr class="originalTr">' +
-                    '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
+                    '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="hidden" value="' + docDataList[i].SEQ + '" name="seqOri" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
                     '<td>' +
                     '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +')">' +
                     '<input type="text" value="' + docDataList[i].FILENAME.substring(docDataList[i].FILENAME.lastIndexOf('/') + 1) + '" class="inputst_box03_15radius fileNameInput" data-originalvalue="' + docDataList[i].FILENAME + '" disabled>' +
@@ -350,9 +350,9 @@ function getMultiLabelYLoc(exportData, multiLabelNumArr) {
     for (var j in exportDataArr) {
         if (exportDataArr[j] != "null" && multiLabelNumArr.indexOf(j) != -1) {
             var entryCount = exportDataArr[j].split(' | ').length;
-            if (maxEntryCount < entryCount) {
+            if (maxEntryCount <= entryCount) {
                 maxEntryCount = entryCount;
-                maxColNum = j
+                maxColNum = j;
             }
         }
     }
@@ -725,14 +725,14 @@ function btnSendClick() {
                     if ($(e).text() == $('.selected.area').eq(0).text()) invoiceType = $(e).attr('alt');
                 });
                 var itemJson = {
-                    'sequence': $(e).prev().prev().val(),
+                    'sequence': $(e).prev().prev().prev().val(),
                     'inviceType': invoiceType,
                     //'cdSite': 'DAE100083',
                     'cdSite': $(e).closest('tr').children().eq(1).find('input').val().split('_')[0],
                     'editFileName': '',
                     'scanDate': $(e).closest('tr').children().eq(2).find('input').val().replace(/[^(0-9)]/gi, '').replace(/(\s*)/,''),
-                    'ivgtrRes': $(e).prev().val() == "null" ? 'N':'Y',
-                    'ivgtrNoSral': $(e).prev().val() == "null" ? 0:$(e).prev().val(),
+                    'ivgtrRes': $(e).prev().prev().val() == "null" ? 'N':'Y',
+                    'ivgtrNoSral': $(e).prev().prev().val() == "null" ? 0:$(e).prev().prev().val(),
                     'sendDate': getTimeStamp(),
                     'fileName': (($(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').substring(0,$(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').lastIndexOf('/')+1)+'org_'+$(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').substring($(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').lastIndexOf('/')+1)).split('.pdf')[0] + '-0.jpg').replace(/\/uploads/, '/img')
                     // 'fileName': ($(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').split('.pdf')[0] + '-0.jpg').replace(/\/uploads/, '/img')

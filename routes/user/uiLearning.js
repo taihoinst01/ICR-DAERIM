@@ -129,7 +129,7 @@ function uiLearnTraining_new(filepath, isAuto, callback) {
                             if(retData.data[ii]["entryLbl"] == labelData.rows[jj].SEQNUM) {
                                 var re = new RegExp(labelData.rows[jj].VALID,'gi');   
                                 var keyParts = retData.data[ii]["text"].match(re); 
-                                if(keyParts != null && labelData.rows[jj].SEQNUM !="877" && labelData.rows[jj].SEQNUM !="504")
+                                if(keyParts != null && labelData.rows[jj].SEQNUM !="504")
                                 {
                                     retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
                                 }
@@ -144,7 +144,7 @@ function uiLearnTraining_new(filepath, isAuto, callback) {
                     // TBL_BATCH_PO_ML_EXPORT table에 exportData 가공
                     var exportData = sync.await(processingExportData(retData.data, labelData.rows, sync.defer()));
                     // TBL_BATCH_PO_ML_EXPORT table insert
-                    sync.await(oracle.insertBatchPoMlExportFromUi([retData.docCategory.DOCTOPTYPE, filepath, exportData], sync.defer()));
+                    sync.await(oracle.insertBatchPoMlExportFromUi([retData.docCategory.DOCTOPTYPE, propertiesConfig.auto.ftpFileUrl+filepath, exportData], sync.defer()));
                 }
 
                 retData.fileinfo = {
@@ -212,8 +212,10 @@ function processingExportData(mlData, labels, done) {
                 for (var j in mlData) {
                     var item = null;
                     if (mlData[j].entryLbl && labels[i].SEQNUM == mlData[j].entryLbl) {
-                        item = ((entryData == "") ? "" : " | ") + mlData[j].location.split(',')[1] + "::" + mlData[j].text;
-                        entryData += item;
+                        if (mlData[j].text != "") {
+                            item = ((entryData == "") ? "" : " | ") + mlData[j].location.split(',')[1] + "::" + mlData[j].text;
+                            entryData += item;
+                        }
                     }
                 }
                 exportData += ((entryData != "") ? "\"" + entryData.replace(/,/gi,'') + "\"" : null);

@@ -4137,8 +4137,8 @@ exports.insertBatchPoMlExportFromUi = function (req, done) {
             let query = "SELECT SEQNUM FROM TBL_BATCH_PO_ML_EXPORT WHERE FILENAME = :filename";
             result = await conn.execute(query, [req[1]]);
             if (result.rows.length > 0) {
-                query = "UPDATE TBL_BATCH_PO_ML_EXPORT SET exportData = :exportData WHERE FILENAME = :filename";
-                params = [req[2], req[1]];
+                query = "UPDATE TBL_BATCH_PO_ML_EXPORT SET docid = :docid, exportData = :exportData WHERE FILENAME = :filename";
+                params = [req[0], req[2], req[1]];
             } else {
                 query = "INSERT INTO TBL_BATCH_PO_ML_EXPORT VALUES (SEQ_BATCH_PO_ML_EXPORT.NEXTVAL, :docTopType, :filepath, :exportData)";
                 params = req;
@@ -6265,7 +6265,7 @@ exports.selectNumTypo = function (req, labelDef, done) {
                     var iLoc =  multiEntryInfo['maxLabel'][i]['location'].split(",");
                     var data = [];
                     for (var j = 0; j < req.data.length; j++) {
-                        if (req.data[j]['entryLbl'] != undefined) {
+                        if (req.data[j]['entryLbl'] != undefined && req.data[j]['text'].replace(/,/gi,'') != "") {
                             for (var k = 0; k < labelDef.rows.length; k++) {
                                 if (req.data[j]['entryLbl'] == labelDef.rows[k]['SEQNUM'] && labelDef.rows[k]['AMOUNT'] == 'single') {
                                     data.push(req.data[j]);
