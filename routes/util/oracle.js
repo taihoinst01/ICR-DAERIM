@@ -5241,15 +5241,40 @@ exports.getFtpFileList = function (fileNm, fileSeq, cdSite, done) {
     });
 };
 
-exports.selectBatchPoMlExport = function (req, pagingCount, done) {
+exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite, done) {
     return new Promise(async function (resolve, reject) {
         let conn;
         let result;
         try {
             conn = await oracledb.getConnection(dbConfig);
+            let siteCdQuery = "";
+            let processStateQuery = "";
+
+            if(processState == "N")
+            {
+                processStateQuery = "" ;
+            }
+            else
+            {
+                
+                processStateQuery = ""+
+                "AND RETURNFLAG = 'Y' " ;
+            }
+
+            if(cdSite == null)
+            {
+                siteCdQuery = ""+
+                "AND API_SITE_CD is not null " ;
+            }
+            else
+            {
+                siteCdQuery = ""+
+                "AND API_SITE_CD = '" +cdSite+ "' ";
+            }
+
             let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, " +
                 "(SELECT " +
@@ -5262,15 +5287,22 @@ exports.selectBatchPoMlExport = function (req, pagingCount, done) {
                 "AND PME.DOCID = :docId " +
                 "AND CAST(FFL.AUTOSENDTIME as Date) >= TO_DATE(:startDate, 'YYMMDDHH24MISS') " +
                 "AND CAST(FFL.AUTOSENDTIME as Date) <= TO_DATE(:endDate, 'YYMMDDHH24MISS') " +
-                "AND RETURNFLAG = :retrinFlag " +
+                siteCdQuery +
+                processStateQuery +
+                // "AND RETURNFLAG = :retrinFlag " +
                 "ORDER BY FFL.SEQ DESC";
+
+            
+            
+            
 
             let TotCntQuery = "" +
                 "SELECT " +
                 "COUNT(D.SEQ) AS CNT " +
                 "FROM " +
                 "( " + basicQuery + " ) D ";
-            let query = "" +
+            
+                let query = "" +
             "SELECT " +
                 "R.* " +
             "FROM " +

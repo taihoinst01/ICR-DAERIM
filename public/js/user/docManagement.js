@@ -53,6 +53,7 @@ function selectDocTopType() {
                         'docTopType': data.docToptypeList[0].SEQNUM,
                         'startDate': $('#searchStartDate').val(),
                         'endDate': $('#searchEndDate').val(),
+                        'cdSite': $('#searchSiteCd').val(),
                         'processState': $('#processStateSelect').val()
                     };
 
@@ -114,15 +115,18 @@ function datePickerEvent() {
 // 문서 조회 버튼 click 이벤트
 function selectBtnClick() {
     $('#btn_search').click(function () {
+        var cdSite = $('#searchSiteCd').val();
         var docTopType = $('#docTopTypeSelect').val();
         var startDate = $('#searchStartDate').val();
         var endDate = $('#searchEndDate').val();
         var processState = $('#processStateSelect').val();
 
         var params = {
+            
             'docTopType': docTopType,
             'startDate': startDate,
             'endDate': endDate,
+            'cdSite': cdSite,
             'processState': processState
         };
         hidePreviewImage();
@@ -175,11 +179,13 @@ function appendDocTableHeader(docLabelList, docDataList) {
 	    '<col style="width:50px;">' +
         '<col style="width:330px;">' +
         '<col style="width:150px;">' +
+        '<col style="width:150px;">' +
         '<col style="width:200px;">';
     var headerTheadHTML = '<thead>';
     headerTheadHTML += '<tr>';
     headerTheadHTML += '<th scope="row"><div class="checkbox-options mauto"><input type="checkbox" class="sta00_all" value="" id="listCheckAll" name="listCheckAll_before" /></div></th>';
     headerTheadHTML += '<th scope="row">파일명</th>';
+    headerTheadHTML += '<th scope="row">현장코드</th>';
     headerTheadHTML += '<th scope="row">날짜</th>';
     headerTheadHTML += '<th scope="row">비고</th>';
 
@@ -237,6 +243,7 @@ function appendSingleHTML(docDataList, docTopType) {
             '<input type="text" value="' + docDataList[i].FILENAME.substring(docDataList[i].FILENAME.lastIndexOf('/') + 1) + '" class="inputst_box03_15radius fileNameInput" data-originalvalue="' + docDataList[i].FILENAME + '" disabled>' +
             '</a>' +
             '</td>' +
+            '<td><input type="text" value="' + docDataList[i].APISITECD + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].APISITECD + '" disabled></td>' +
             '<td><input type="text" value="' + docDataList[i].AUTOSENDTIME + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].AUTOSENDTIME + '" disabled></td>' +
             '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>';
         var items = docDataList[i].EXPORTDATA;
@@ -285,11 +292,13 @@ function appendMultiHTML(docLabelList, docDataList, docTopType) {
                     '<input type="text" value="' + docDataList[i].FILENAME.substring(docDataList[i].FILENAME.lastIndexOf('/') + 1) + '" class="inputst_box03_15radius fileNameInput" data-originalvalue="' + docDataList[i].FILENAME + '" disabled>' +
                     '</a>' +
                     '</td>' +
+                    '<td><input type="text" value="' + docDataList[i].APISITECD + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].APISITECD + '" disabled></td>' +
                     '<td><input type="text" value="' + docDataList[i].AUTOSENDTIME + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].AUTOSENDTIME + '" disabled></td>' +
                     '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>';
             } else {
                 mlDataListHTML = '' +
                     '<tr class="multiTr_' + docDataList[i].SEQ + '">' +
+                    '<td></td>' +
                     '<td></td>' +
                     '<td></td>' +
                     '<td></td>' +
@@ -463,7 +472,7 @@ function appendPopTable(fileName, seq, docTopType) {
 
     popTableContentHTML += '<tr>';
     if (labels.length > 0) {
-        for (var i = 4; i < 4 + labels.length; i++) {
+        for (var i = 5; i < 5 + labels.length; i++) {
             var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
 
             /*
@@ -485,7 +494,7 @@ function appendPopTable(fileName, seq, docTopType) {
             popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
         }
     } else {
-        for (var i = 4; i < 4 + datas[0].EXPORTDATA.split(',').length; i++) {
+        for (var i = 5; i < 5 + datas[0].EXPORTDATA.split(',').length; i++) {
             var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
             popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
             /*
@@ -510,7 +519,7 @@ function appendPopTable(fileName, seq, docTopType) {
     if ($('.multiTr_' + seq).length > 0) {       
         for (var i = 0; i < $('.multiTr_' + seq).length; i++) {
             popTableContentHTML += '<tr>'
-            for (var j = 4; j < 4 + labels.length; j++) {
+            for (var j = 5; j < 5 + labels.length; j++) {
                 var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(j).find('input').eq(0).val();
 
                 /*
@@ -825,6 +834,7 @@ function leadingZeros(n, digits) {
 // 페이징 번호 click 이벤트
 function btnPagingClick() {
     $('.li_paging > a').click(function () {
+        var cdSite = $('#searchSiteCd').val();
         var docTopType = $('#docTopTypeSelect').val();
         var startDate = $('#searchStartDate').val();
         var endDate = $('#searchEndDate').val();
@@ -832,6 +842,7 @@ function btnPagingClick() {
         var pagingCount = $(this).closest('.li_paging').val();
 
         var params = {
+            'cdSite':cdSite,
             'docTopType': docTopType,
             'startDate': startDate,
             'endDate': endDate,
