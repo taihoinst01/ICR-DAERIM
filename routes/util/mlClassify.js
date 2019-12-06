@@ -307,11 +307,11 @@ function findEntry(req, docTypeVal, docTopTypeVal, done) {
                         // } 
                         // else 
                         // if (multiEntryCheck(firstEntry, req.data[k] , req.docCategory.DOCTYPE) && entryHeightCheck(preEntryHeight, req.data[k], diffHeight)) {
-                        if (multiEntryCheck(firstEntry, req.data[k] , req.docCategory.DOCTYPE)) {
-                            req.data[k]['entryLbl'] = firstEntry['entryLbl'];
-                            req.data[k]["amount"] = firstEntry['amount'];
-                            preEntryHeight = req.data[k];
-                        }
+                        // if (multiEntryCheck(firstEntry, req.data[k] , req.docCategory.DOCTYPE)) {
+                        //     req.data[k]['entryLbl'] = firstEntry['entryLbl'];
+                        //     req.data[k]["amount"] = firstEntry['amount'];
+                        //     preEntryHeight = req.data[k];
+                        // }
                     }
                 }
             }

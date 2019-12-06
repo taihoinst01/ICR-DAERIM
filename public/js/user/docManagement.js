@@ -25,6 +25,7 @@ function clickEventHandlers() {
     btnInsertClick(); // 추가 버튼
     btnSaveClick(); // 저장 버튼
     btnSendClick(); // 전송 버튼
+    btnReportClick(); // 보고서 생성 버튼
     hideBtnClick(); // 미리보기 이미지 숨김버튼
 }
 
@@ -54,7 +55,9 @@ function selectDocTopType() {
                         'startDate': $('#searchStartDate').val(),
                         'endDate': $('#searchEndDate').val(),
                         'cdSite': $('#searchSiteCd').val(),
-                        'processState': $('#processStateSelect').val()
+                        'processState': $('#processStateSelect').val(),
+                        'fileName': $('#searchFileNm').val(),
+                        'sequence': $('#searchSequence').val()
                     };
 
                     selectBatchPoMlExport(params, true);
@@ -120,6 +123,8 @@ function selectBtnClick() {
         var startDate = $('#searchStartDate').val();
         var endDate = $('#searchEndDate').val();
         var processState = $('#processStateSelect').val();
+        var fileName = $('#searchFileNm').val();
+        var sequence = $('#searchSequence').val();
 
         var params = {
             
@@ -127,7 +132,9 @@ function selectBtnClick() {
             'startDate': startDate,
             'endDate': endDate,
             'cdSite': cdSite,
-            'processState': processState
+            'processState': processState,
+            'fileName': fileName,
+            'sequence': sequence,
         };
         hidePreviewImage();
         selectBatchPoMlExport(params, false);
@@ -170,6 +177,70 @@ function selectBatchPoMlExport(params, isInit) {
     });
 }
 
+
+
+// 보고서 생성 이벤트
+function selectReportExport(params, isInit) {
+    $.ajax({
+        url: '/docManagement/selectReportExport',
+        type: 'post',
+        datatype: 'json',
+        data: JSON.stringify(params),
+        contentType: 'application/json; charset=UTF-8',
+        beforeSend: function () {
+            $('#progressMsgTitle').html("엑셀 보고서 생성중...");
+            if (!isInit) progressId = showProgressBar();
+        },
+        success: function (data) {
+            
+            if (!data.error) {
+                labels = data.docLabelList;
+                datas = data.docDataList;
+                console.log(datas);
+                
+
+                for (var i in datas)
+                {
+
+                    var items = datas[i].EXPORTDATA;
+                    items = items.replace(/\"/gi, '').slice(1, -1);
+                    items = items.split(',');
+                    //console.log(items.length);
+
+                    var fileName = datas[i].FILENAME.substring(datas[i].FILENAME.lastIndexOf('/') + 1);
+                    for (var j in items)
+                    {
+                        var textVal = (items[j].split('::')[1]) ? items[j].split('::')[1] : items[j];
+                        console.log(textVal);
+                    }
+                }
+                
+                
+
+                
+
+
+            //     appendDocTableHeader(data.docLabelList, data.docDataList); // 문서조회 table html 렌더링
+            //     checkAllBoxClick(); // all 체크박스 background css 적용
+            //     appendMLData(data.docLabelList, data.docDataList);
+            //     $('#paging').html(appendPaging((params.pagingCount) ? params.pagingCount : 1, data.totCount)); // 페이징 html 렌더링
+            //     btnPagingClick(); // 페이징 버튼 이벤트 적용
+            //     checkBoxClick(); // 체크박스 background css 적용
+            // } else {
+            //     fn_alert('alert', 'ERROR');
+            }
+            endProgressBar(progressId);
+        },
+        error: function (err) {
+            console.log(err);
+            fn_alert('alert', 'ERROR');
+            endProgressBar(progressId);
+        }
+    });
+}
+
+
+
 // 문서양식에 따른 table 헤더 렌더링
 function appendDocTableHeader(docLabelList, docDataList) {
     $('#docTableColumn').empty();
@@ -180,14 +251,20 @@ function appendDocTableHeader(docLabelList, docDataList) {
         '<col style="width:330px;">' +
         '<col style="width:150px;">' +
         '<col style="width:150px;">' +
+        '<col style="width:150px;">' +
+        '<col style="width:150px;">' +
+        '<col style="width:200px;">' +
         '<col style="width:200px;">';
     var headerTheadHTML = '<thead>';
     headerTheadHTML += '<tr>';
     headerTheadHTML += '<th scope="row"><div class="checkbox-options mauto"><input type="checkbox" class="sta00_all" value="" id="listCheckAll" name="listCheckAll_before" /></div></th>';
     headerTheadHTML += '<th scope="row">파일명</th>';
     headerTheadHTML += '<th scope="row">현장코드</th>';
+    headerTheadHTML += '<th scope="row">시퀀스</th>';
+    headerTheadHTML += '<th scope="row">송장구분</th>';
     headerTheadHTML += '<th scope="row">날짜</th>';
-    headerTheadHTML += '<th scope="row">비고</th>';
+    headerTheadHTML += '<th scope="row">검토비고</th>';
+    headerTheadHTML += '<th scope="row">검토피드백비고</th>';
 
     if (docLabelList.length > 0) {
         for (var i in docLabelList) {
@@ -195,10 +272,10 @@ function appendDocTableHeader(docLabelList, docDataList) {
             headerTheadHTML += '<th scope="row">' + docLabelList[i].KORNM + '</th>';
         }
     } else {
-        for (var i in docDataList[0].EXPORTDATA.split(',')) {
-            headerColGroupHTML += '<col style="width:180px;">';
-            headerTheadHTML += '<th scope="row"></th>';
-        }
+        // for (var i in docDataList[0].EXPORTDATA.split(',')) {
+        //     headerColGroupHTML += '<col style="width:180px;">';
+        //     headerTheadHTML += '<th scope="row"></th>';
+        // }
     }
     headerColGroupHTML += '</colgroup>';
     headerTheadHTML += '</tr>';
@@ -244,8 +321,11 @@ function appendSingleHTML(docDataList, docTopType) {
             '</a>' +
             '</td>' +
             '<td><input type="text" value="' + docDataList[i].APISITECD + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].APISITECD + '" disabled></td>' +
+            '<td><input type="text" value="' + docDataList[i].APISEQ + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].APISEQ + '" disabled></td>' +
+            '<td><input type="text" value="' + docDataList[i].KORNM + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].KORNM + '" disabled></td>' +
             '<td><input type="text" value="' + docDataList[i].AUTOSENDTIME + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].AUTOSENDTIME + '" disabled></td>' +
-            '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>';
+            '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>' +
+            '<td><input type="text" value="" class="inputst_box03_15radius" data-originalvalue=""></td>';
         var items = docDataList[i].EXPORTDATA;
         items = items.replace(/\"/gi, '').slice(1, -1);
         items = items.split(',');
@@ -293,11 +373,17 @@ function appendMultiHTML(docLabelList, docDataList, docTopType) {
                     '</a>' +
                     '</td>' +
                     '<td><input type="text" value="' + docDataList[i].APISITECD + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].APISITECD + '" disabled></td>' +
+                    '<td><input type="text" value="' + docDataList[i].APISEQ + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].APISEQ + '" disabled></td>' +
+                    '<td><input type="text" value="' + docDataList[i].KORNM + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].KORNM + '" disabled></td>' +
                     '<td><input type="text" value="' + docDataList[i].AUTOSENDTIME + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].AUTOSENDTIME + '" disabled></td>' +
-                    '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>';
+                    '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>' + 
+                    '<td><input type="text" value="" class="inputst_box03_15radius" data-originalvalue=""></td>';
             } else {
                 mlDataListHTML = '' +
                     '<tr class="multiTr_' + docDataList[i].SEQ + '">' +
+                    '<td></td>' +
+                    '<td></td>' +
+                    '<td></td>' +
                     '<td></td>' +
                     '<td></td>' +
                     '<td></td>' +
@@ -472,7 +558,7 @@ function appendPopTable(fileName, seq, docTopType) {
 
     popTableContentHTML += '<tr>';
     if (labels.length > 0) {
-        for (var i = 5; i < 5 + labels.length; i++) {
+        for (var i = 8; i < 8 + labels.length; i++) {
             var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
 
             /*
@@ -494,7 +580,7 @@ function appendPopTable(fileName, seq, docTopType) {
             popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
         }
     } else {
-        for (var i = 5; i < 5 + datas[0].EXPORTDATA.split(',').length; i++) {
+        for (var i = 8; i < 8 + datas[0].EXPORTDATA.split(',').length; i++) {
             var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
             popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
             /*
@@ -519,7 +605,7 @@ function appendPopTable(fileName, seq, docTopType) {
     if ($('.multiTr_' + seq).length > 0) {       
         for (var i = 0; i < $('.multiTr_' + seq).length; i++) {
             popTableContentHTML += '<tr>'
-            for (var j = 5; j < 5 + labels.length; j++) {
+            for (var j = 8; j < 8 + labels.length; j++) {
                 var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(j).find('input').eq(0).val();
 
                 /*
@@ -720,6 +806,35 @@ function btnSaveClick() {
     });
 }
 
+//보고서 생성 버튼 클릭
+function btnReportClick() {
+    $('#btn_report').click(function () {
+        var cdSite = $('#searchSiteCd').val();
+        var docTopType = $('#docTopTypeSelect').val();
+        var startDate = $('#searchStartDate').val();
+        var endDate = $('#searchEndDate').val();
+        var processState = $('#processStateSelect').val();
+        var fileName = $('#searchFileNm').val();
+        var sequence = $('#searchSequence').val();
+        
+
+        var params = {
+            
+            'docTopType': docTopType,
+            'startDate': startDate,
+            'endDate': endDate,
+            'cdSite': cdSite,
+            'processState': processState,
+            'fileName': fileName,
+            'sequence': sequence,
+        };
+        hidePreviewImage();
+        // selectBatchPoMlExport(params, false);
+        selectReportExport(params, false);
+    });
+}
+
+
 // 전송 버튼 click 이벤트
 function btnSendClick() {
     $('#btn_send').click(function () {
@@ -737,9 +852,10 @@ function btnSendClick() {
                     'sequence': $(e).prev().prev().prev().val(),
                     'inviceType': invoiceType,
                     //'cdSite': 'DAE100083',
-                    'cdSite': $(e).closest('tr').children().eq(1).find('input').val().split('_')[0],
+                    'cdSite': $(e).closest('tr').children().eq(2).find('input').val().split('_')[0],
                     'editFileName': '',
-                    'scanDate': $(e).closest('tr').children().eq(2).find('input').val().replace(/[^(0-9)]/gi, '').replace(/(\s*)/,''),
+                    'scanDate': $(e).closest('tr').children().eq(5).find('input').val().replace(/[^(0-9)]/gi, '').replace(/(\s*)/,''),
+                    'returnBigo': $(e).closest('tr').children().eq(7).find('input').val(),
                     'ivgtrRes': $(e).prev().prev().val() == "null" ? 'N':'Y',
                     'ivgtrNoSral': $(e).prev().prev().val() == "null" ? 0:$(e).prev().prev().val(),
                     'sendDate': getTimeStamp(),
@@ -750,9 +866,9 @@ function btnSendClick() {
                 var ocrDataItem = {};
                 for (var j in labels) {
                     if (labels[j].AMOUNT == 'multi') { // multi entry
-                        var tempArr = [{ 'value': $(e).closest('tr').children().eq(Number(j) + 4).find('input').val() }];
+                        var tempArr = [{ 'value': $(e).closest('tr').children().eq(Number(j) + 8).find('input').val() }];
                         for (var k = 0; k < $('.multiTr_' + $(e).prev().val()).length; k++) {
-                            tempArr.push({ 'value': $('.multiTr_' + $(e).prev().val()).eq(k).children().eq(Number(j) + 4).find('input').val() });
+                            tempArr.push({ 'value': $('.multiTr_' + $(e).prev().val()).eq(k).children().eq(Number(j) + 8).find('input').val() });
                         }
                         ocrDataItem = {
                             'engKey': labels[j].ENGNM,
@@ -766,7 +882,7 @@ function btnSendClick() {
                             'engKey': labels[j].ENGNM,
                             'korKey': labels[j].KORNM,
                             'cnt': '1',
-                            'keyValue': [{ 'value': $(e).closest('tr').children().eq(Number(j) + 4).find('input').val() }]
+                            'keyValue': [{ 'value': $(e).closest('tr').children().eq(Number(j) + 8).find('input').val() }]
                         };
                     }
                     ocrDataArr.push(ocrDataItem);
@@ -839,6 +955,8 @@ function btnPagingClick() {
         var startDate = $('#searchStartDate').val();
         var endDate = $('#searchEndDate').val();
         var processState = $('#processStateSelect').val();
+        var fileName = $('#searchFileNm').val();
+        var sequence = $('#searchSequence').val();
         var pagingCount = $(this).closest('.li_paging').val();
 
         var params = {
@@ -847,6 +965,8 @@ function btnPagingClick() {
             'startDate': startDate,
             'endDate': endDate,
             'processState': processState,
+            'fileName': fileName,
+            'sequence': sequence,
             'pagingCount': pagingCount
         };
         selectBatchPoMlExport(params, false);

@@ -60,7 +60,8 @@ var propertiesConfig = {
         //keepalive: 10000
     },
     api: {
-        invoiceApi: 'http://13.209.21.134:8080/dcostb/api/invoiceverif/insertInvoiceverif'
+        // invoiceApi: 'http://13.209.21.134:8080/dcostb/api/invoiceverif/insertInvoiceverif'
+        invoiceApi: 'http://13.125.234.156:8080/dcostb/api/invoiceverif/insertInvoiceverif'
     }
 };
 

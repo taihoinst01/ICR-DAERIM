@@ -4099,7 +4099,7 @@ exports.insertFtpFileListFromUi = function (req, done) {
                 apiSiteCD = apiSiteCD.split(".")[0];
             }
 
-            var res = await conn.execute("SELECT MAX(API_SEQ) AS API_SEQ FROM TBL_FTP_FILE_LIST WHERE API_SITE_CD = :api_site_cd ORDER BY SEQ DESC", [apiSiteCD]);
+            var res = await conn.execute("SELECT MAX(TO_NUMBER(API_SEQ)) AS API_SEQ FROM TBL_FTP_FILE_LIST WHERE API_SITE_CD = :api_site_cd ORDER BY SEQ DESC", [apiSiteCD]);
 
             if (res.rows[0]["API_SEQ"] == null) {
                 apiSeq = 1;
@@ -5191,7 +5191,7 @@ exports.updateFtpFileListErrMsg = function (fileSeq, cdSite, errMsg, done) {
         try {
             conn = await oracledb.getConnection(dbConfig);
 
-            let query = "UPDATE TBL_FTP_FILE_LIST SET ERRMSG = '"+errMsg+"' WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' ";
+            let query = "UPDATE TBL_FTP_FILE_LIST SET ERRMSG = '"+errMsg+"' , RETURNTIME = sysdate  WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' ";
             let result = await conn.execute(query);
             return done(null, result.rowsAffected);
         } catch (err) { // catches errors in getConnection and the query
@@ -5241,7 +5241,10 @@ exports.getFtpFileList = function (fileNm, fileSeq, cdSite, done) {
     });
 };
 
-exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite, done) {
+
+
+
+exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite, fileName, sequence, done) {
     return new Promise(async function (resolve, reject) {
         let conn;
         let result;
@@ -5249,6 +5252,8 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
             conn = await oracledb.getConnection(dbConfig);
             let siteCdQuery = "";
             let processStateQuery = "";
+            let fileNameQuery = "";
+            let sequenceQuery = "";
 
             if(processState == "N")
             {
@@ -5259,6 +5264,28 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
                 
                 processStateQuery = ""+
                 "AND RETURNFLAG = 'Y' " ;
+            }
+
+            if(fileName == null)
+            {
+                fileNameQuery = "" ;
+            }
+            else
+            {
+                
+                fileNameQuery = ""+
+                "AND PME.FILENAME LIKE '%" + fileName + "%' ";
+            }
+            
+            if(sequence == null)
+            {
+                sequenceQuery = "" ;
+            }
+            else
+            {
+                
+                sequenceQuery = ""+
+                "AND FFL.API_SEQ = '" + sequence + "' ";
             }
 
             if(cdSite == null)
@@ -5274,9 +5301,9 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
 
             let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
             "FROM " +
-                "TBL_BATCH_PO_ML_EXPORT PME, " +
+                "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
                 "(SELECT " +
                     "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
@@ -5285,10 +5312,13 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +
                 "AND PME.DOCID = :docId " +
+                " AND PME.DOCID = DTT.SEQNUM " +
                 "AND CAST(FFL.AUTOSENDTIME as Date) >= TO_DATE(:startDate, 'YYMMDDHH24MISS') " +
                 "AND CAST(FFL.AUTOSENDTIME as Date) <= TO_DATE(:endDate, 'YYMMDDHH24MISS') " +
                 siteCdQuery +
                 processStateQuery +
+                fileNameQuery +
+                sequenceQuery +
                 // "AND RETURNFLAG = :retrinFlag " +
                 "ORDER BY FFL.SEQ DESC";
 
@@ -5333,6 +5363,130 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
         }
     });
 };
+
+
+
+exports.selectReportExport = function (req,  processState, pagingCount,cdSite, fileName, sequence, done) {
+    return new Promise(async function (resolve, reject) {
+        let conn;
+        let result;
+        try {
+            conn = await oracledb.getConnection(dbConfig);
+            let siteCdQuery = "";
+            let processStateQuery = "";
+            let fileNameQuery = "";
+            let sequenceQuery = "";
+
+            if(processState == "N")
+            {
+                processStateQuery = "" ;
+            }
+            else
+            {
+                
+                processStateQuery = ""+
+                "AND FFL.RETURNFLAG = 'Y' " ;
+            }
+
+            if(fileName == null)
+            {
+                fileNameQuery = "" ;
+            }
+            else
+            {
+                
+                fileNameQuery = ""+
+                "AND PME.FILENAME LIKE '%" + fileName + "%' ";
+            }
+
+            if(cdSite == null)
+            {
+                siteCdQuery = ""+
+                "AND FFL.API_SITE_CD is not null " ;
+            }
+            else
+            {
+                siteCdQuery = ""+
+                "AND FFL.API_SITE_CD = '" +cdSite+ "' ";
+            }
+
+            if(sequence == null)
+            {
+                sequenceQuery = "" ;
+            }
+            else
+            {
+                
+                sequenceQuery = ""+
+                "AND FFL.API_SEQ = '" + sequence + "' ";
+            }
+
+            let basicQuery = "" +
+            "SELECT " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
+            "FROM " +
+                "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
+                "(SELECT " +
+                    "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
+                    "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
+                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL " +
+                "FROM " +
+                    "TBL_FTP_FILE_LIST) FFL " +
+                "WHERE PME.FILENAME = FFL.FILENAME " +
+                "AND PME.DOCID = :docId " +
+                " AND PME.DOCID = DTT.SEQNUM " +
+                "AND CAST(FFL.AUTOSENDTIME as Date) >= TO_DATE(:startDate, 'YYMMDDHH24MISS') " +
+                "AND CAST(FFL.AUTOSENDTIME as Date) <= TO_DATE(:endDate, 'YYMMDDHH24MISS') " +
+                siteCdQuery +
+                processStateQuery +
+                fileNameQuery +
+                sequenceQuery +
+                // "AND RETURNFLAG = :retrinFlag " +
+                "ORDER BY FFL.SEQ DESC";
+
+            
+            
+            
+
+            let TotCntQuery = "" +
+                "SELECT " +
+                "COUNT(D.SEQ) AS CNT " +
+                "FROM " +
+                "( " + basicQuery + " ) D ";
+            
+                let query = "" +
+            "SELECT " +
+                "R.* " +
+            "FROM " +
+                "(SELECT " + 
+                    "ROWNUM AS RNUM, D.* " +
+                "FROM " +
+                    "( " + basicQuery + " ) D " +
+                ") R " ;
+            // "WHERE R.RNUM BETWEEN " + (((pagingCount - 1) * 30) + 1) + " AND " + (pagingCount * 30);
+
+            cntResult = await conn.execute(TotCntQuery, req);
+            result = await conn.execute(query, req);
+            if (cntResult.rows[0].CNT != 0 && result.rows.length != 0) {
+                return done(null, [cntResult.rows[0].CNT, result.rows]);
+            } else {
+                return done(null, [0, []]);
+            }
+        } catch (err) { // catches errors in getConnection and the query
+            reject(err);
+        } finally {
+            if (conn) {   // the conn assignment worked, must release
+                try {
+                    await conn.release();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+    });
+};
+
+
 
 exports.selectSingleBatchPoMlExport = function (req, done) {
     return new Promise(async function (resolve, reject) {
