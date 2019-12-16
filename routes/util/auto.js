@@ -53,6 +53,7 @@ var remoteFTP_v2 = function () {
                 var dt = new Date();                
                 
                 var execFileNames = [];
+                var execFileTimes = [];
                 // TBL_FTP_FILE_LIST 데이터 조회
                 var fileNames = sync.await(getftpFileList(sync.defer()));
 
@@ -63,33 +64,45 @@ var remoteFTP_v2 = function () {
                         for (var i in fileNames) {
                             var isOverlap = false;
                             for (var j in result) {
-                                if (fileNames[i] === result[j].FILENAME) {
+                                if (fileNames[i].split("@@@")[0] === result[j].FILENAME) {
                                     isOverlap = true;
                                     break;
                                 }
                             }
-                            if (!isOverlap) execFileNames.push(fileNames[i]);
+                            if (!isOverlap) 
+                            {
+                                execFileNames.push(fileNames[i].split("@@@")[0]);
+                                execFileTimes.push(fileNames[i].split("@@@")[1]);   
+                            }
                         }
                     } else {
-                        execFileNames = fileNames;
+                        execFileNames = fileNames.split("@@@")[0];
+                        execFileTimes = fileNames.split("@@@")[1];
                     }
                 }
                 console.log('auto processing start ['+dt.toFormat('YYYY-MM-DD HH24:MI:SS')+'] -------------> fileName : [' + execFileNames.toString() + '] ');
 
                 // ocr 및 ml 프로세스 실행
-                if (execFileNames.lengh != 0) {
+                if (execFileNames.length != 0) {
                     for (var i in execFileNames) {
                         // TBL_FTP_FILE_LIST tabel insert
-                        sync.await(oracle.insertFtpFileListFromUi([propertiesConfig.auto.ftpFileUrl, execFileNames[i]], sync.defer()));
+                        sync.await(oracle.insertFtpFileListFromUi([propertiesConfig.auto.ftpFileUrl+execFileNames[i].split('_')[0]+"/"+execFileTimes[i]+"/", execFileNames[i]], sync.defer()));
                     }
 
                     var apiData = [];
                     for (var i in execFileNames) {
                         // ftp file move ScanFiles -> uploads directory
-                        sync.await(moveFtpFile(execFileNames[i], sync.defer()));
+                        var path = sync.await(changeFtpFilePath(execFileNames[i],execFileTimes[i], sync.defer()));
+                        if(path == null)
+                        {
+                            sync.await(makeFtpFilePath(execFileNames[i],execFileTimes[i], sync.defer()));
+                        }
+                        sync.await(moveFtpFile(execFileNames[i],execFileTimes[i], sync.defer()));
 
+                        sync.await(deleteFtpFile(execFileNames[i],execFileTimes[i], sync.defer()));
+                        
                         // ocr processing and label & entry mapping  
-                        var resultData = sync.await(uiLearnTraining_auto(execFileNames[i], true, sync.defer()));                       
+                        var resultData = sync.await(uiLearnTraining_auto(execFileNames[i],execFileTimes[i], true, sync.defer()));                       
                         for (var j in resultData) {
 
                             var fileFullPath = resultData[j].fileinfo.filepath;
@@ -106,7 +119,7 @@ var remoteFTP_v2 = function () {
                             //api JSON processing
                             var result = sync.await(oracle.selectSingleBatchPoMlExport(fileFullPath, sync.defer()));
                             apiData.push({ 'data': result, 'labels': labels });
-                        }                       
+                        } 
                     }
                     if (apiData.length != 0) {
                         sync.await(apiCall(apiData, sync.defer()));
@@ -174,16 +187,21 @@ function getftpFileList(done) {
         try {
             var c = new ftp();
             var fileNames = [];
+            var fileTime = [];
             c.on('ready', function () {
                 c.list(ftpScanDir, function (err, list) {
                     if (err) throw err;
                     for (var i in list) {
                         var ext = list[i].name.substring(list[i].name.lastIndexOf('.') + 1);
                         var size = list[i].size;
-                        if (ext == 'pdf' && size > 0) fileNames.push(list[i].name);
+                        if (ext == 'pdf' && size > 0 ) 
+                        {
+                            fileNames.push(list[i].name+"@@@"+list[i].date.toISOString().replace(/T/, ' ').replace(/\..+/, '').split('-')[0]+""+
+                            list[i].date.toISOString().replace(/T/, ' ').replace(/\..+/, '').split('-')[1]);
+                        }
                     }
                     c.end();
-                    return done(null, fileNames);
+                    return done( null, fileNames);
                 });
             });
             c.connect(ftpConfig);
@@ -194,10 +212,59 @@ function getftpFileList(done) {
 }
 
 // FTP server file move (ScanFiles -> uploads)
-function moveFtpFile(fileName, done) {
+function changeFtpFilePath(fileName,fileTime, done) {
+
+    var destFtpFilePath = propertiesConfig.auto.destFtpFilePath+fileName.split('_')[0]+"/"+fileTime;
+
+    sync.fiber(function () {
+        try {
+            var c = new ftp();
+            c.on('ready', function () {
+                c.cwd(destFtpFilePath, function (err,path) {
+                    if (err) 
+                    {
+                        console.log(err);
+                        return done(null, null);
+                    }
+                    return done(null, path);
+                    });
+                });
+            c.connect(ftpConfig);
+        } catch (e) {
+            throw e;
+        }
+    });
+}
+
+
+// FTP server file move (ScanFiles -> uploads)
+function makeFtpFilePath(fileName,fileTime, done) {
+
+    var destFtpFilePath = propertiesConfig.auto.destFtpFilePath+fileName.split('_')[0]+"/"+fileTime;
+
+    sync.fiber(function () {
+        try {
+            var c = new ftp();
+            c.on('ready', function () {
+                c.mkdir(destFtpFilePath, function (err) {
+                    if (err) console.log(err);
+                    
+                    return done(null);
+                    });
+                });
+            c.connect(ftpConfig);
+        } catch (e) {
+            throw e;
+        }
+    });
+}
+
+// FTP server file move (ScanFiles -> uploads)
+function moveFtpFile(fileName,fileTime, done) {
+
     var ftpFilePath = propertiesConfig.auto.ftpFilePath + fileName;
     var localFilePath = propertiesConfig.auto.localFilePath + fileName;
-    var destFtpFilePath = propertiesConfig.auto.destFtpFilePath + fileName;
+    var destFtpFilePath = propertiesConfig.auto.destFtpFilePath+fileName.split('_')[0]+"/"+fileTime+"/" + fileName;
 
     sync.fiber(function () {
         try {
@@ -211,11 +278,11 @@ function moveFtpFile(fileName, done) {
                             if (err) console.log(err);
                             c.end();
                             fs.unlinkSync(localFilePath);
+                            // fs.unlinkSync("/"+ftpFilePath);
                             return done(null, null);
                         });
                     });
                 });
-
             });
             c.connect(ftpConfig);
         } catch (e) {
@@ -224,11 +291,36 @@ function moveFtpFile(fileName, done) {
     });
 }
 
-// ocr process and entry mapping
-function uiLearnTraining_auto(filepath, isAuto, callback) {
+// FTP server file move (ScanFiles -> uploads)
+function deleteFtpFile(fileName,fileTime, done) {
+
+    var ftpFilePath = propertiesConfig.auto.ftpFilePath + fileName;
+    var destFtpFilePath = propertiesConfig.auto.destFtpFilePath+fileName.split('_')[0]+"/"+fileTime;
+
     sync.fiber(function () {
         try {
-            var icrRestResult = sync.await(ocrUtil.icrRest(filepath, isAuto, sync.defer()));
+            var c = new ftp();
+            c.on('ready', function () {
+                c.delete(ftpFilePath, function (err) {
+                    if (err) console.log(err);
+                    
+                    return done(null);
+                    });
+                });
+            c.connect(ftpConfig);
+        } catch (e) {
+            throw e;
+        }
+    });
+}
+
+
+
+// ocr process and entry mapping
+function uiLearnTraining_auto(filepath,fileTime, isAuto, callback) {
+    sync.fiber(function () {
+        try {
+            var icrRestResult = sync.await(ocrUtil.icrRest(filepath, fileTime, isAuto, sync.defer()));
 
             var resPyArr = JSON.parse(icrRestResult);
             var retData = {};
@@ -261,14 +353,18 @@ function uiLearnTraining_auto(filepath, isAuto, callback) {
                         for(var jj = 0; jj < labelData.rows.length; jj++) {
                             if(retData.data[ii]["entryLbl"] == labelData.rows[jj].SEQNUM) {
                                 var re = new RegExp(labelData.rows[jj].VALID,'gi');   
-                                var keyParts = retData.data[ii]["text"].match(re); 
+                                
                                 // if(keyParts != null)
                                 // {
                                 //     retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
                                 // }
-                                if(keyParts != null && labelData.rows[jj].SEQNUM !="877" && labelData.rows[jj].SEQNUM !="504")
+                                if(retData.data[ii]["text"] != null)
                                 {
-                                    retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
+                                    var keyParts = retData.data[ii]["text"].match(re); 
+                                    if(keyParts != null && labelData.rows[jj].SEQNUM !="877" && labelData.rows[jj].SEQNUM !="504")
+                                    {
+                                        retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
+                                    }
                                 }
                             }                                
                         }
@@ -276,10 +372,10 @@ function uiLearnTraining_auto(filepath, isAuto, callback) {
                 }
 
                 retData = sync.await(oracle.selectNumTypo(retData, labelData, sync.defer()));
-
+                //filename.split('_')[0]+"/"+req1+"/"+filename
                 retData.fileinfo = {
-                    filepath: propertiesConfig.auto.ftpFileUrl + resPyArr[i].originFileName,
-                    convertFilepath: propertiesConfig.auto.ftpFileUrl + resPyArr[i].convertFileName
+                    filepath: propertiesConfig.auto.ftpFileUrl+filepath.split('_')[0]+"/"+fileTime+"/" + resPyArr[i].originFileName,
+                    convertFilepath: propertiesConfig.auto.ftpFileUrl+filepath.split('_')[0]+"/"+fileTime+"/" + resPyArr[i].convertFileName
                 };
 
                 retDataList.push(retData);

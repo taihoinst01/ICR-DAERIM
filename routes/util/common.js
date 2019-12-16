@@ -150,7 +150,7 @@ router.post('/imageUpload', upload.any(), function (req, res) {
                 for (var i in fileInfo) {
                     var fileName = fileInfo[i].oriFileName;
                     // TBL_FTP_FILE_LIST table insert   
-                    sync.await(oracle.insertFtpFileListFromUi([filePath, fileName], sync.defer()));
+                    // sync.await(oracle.insertFtpFileListFromUi([filePath, fileName], sync.defer()));
                 }
                 res.send({ code: 200, message: returnObj, fileInfo: fileInfo, type: 'image' });
             }         

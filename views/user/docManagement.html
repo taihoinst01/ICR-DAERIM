@@ -86,10 +86,10 @@
 						</select>
 						<input type="text" style="width: 20%; height: 40px; border: 1px solid #EA7169; border-radius: 10px; color: #EA7169;" name="searchFileNm" id="searchFileNm" placeholder="파일명"/>
 						<input type="text" style="width: 10%; height: 40px; border: 1px solid #EA7169; border-radius: 10px; color: #EA7169;" name="searchSequence" id="searchSequence" placeholder="시퀀스"/>
-                    </div>
 
-                    <div class="btn_rt">
-                        <button type="button" id="btn_search" class="button_st3">조회</button>
+						<div class="btn_st_01">
+							<button type="button" id="btn_search" class="button_st3">조회</button>
+						</div>
                     </div>
                 </div>
 				<!-- // 구분 목록 -->
@@ -423,6 +423,10 @@
 </body>
 </html>
 
+
+<!-- //팝업_양식이미지 -->
+
+<!--todo 12.09 팝업수정-->
 <!-- 팝업_양식이미지 -->
 <div id="docPop" class="poplayer docPop">
 	<div class="bg"></div>
@@ -431,191 +435,68 @@
 			<div class="pop_header">
 				<h1>양식이미지</h1>
 			</div>
-			<div class="pop_content_dm">
-				<div class="pop_box_120 box_txt_st01">
-					<!-- 문서 이미지 (상단) -->
-					<div class="batch_tbl_right_divBodyScroll divBodyScroll pop_dm_01" style="height: 470px;">
-						<img id="PopupImg" src="" style="width: 100%; height: auto;">
+			<div class="pop_content">
+				<div class="pop_content_L_single">
+					<div class="pop_content_L_leftTop">
+						<!-- <div class="pop_single_row">
+							<div class="pop_single_row_col_100">
+								<div class="col_title_wrap"><p class="col_title">공급자<b class="redFont">*</b></p></div>
+								<div class="col_contents_02">
+									<input type="text" class="ipt_st02" value="null">
+								</div>
+							</div>
+						</div> -->
 					</div>
-					<!-- // 문서 이미지 (상단) -->
-                    <!--
-					<div class="btn_rt02">
-						<div class="date_left_sm_btn"></div>
-						<div style="color: rgba(0,0,0,.4);float: left;padding: 7px;">Page 1 of 4</div>
-						<div class="date_right_sm_btn"></div>
-					</div>
-                    -->
-					<!-- 문서 정보 (하단) -->
-					<div class="table_style03">
-						<!-- 테이블 HEADER(CROSSTAB) START -->
-						<div id="right_header" class="batch_tbl_right_header" style="overflow-x:hidden; overflow-y:hidden;">
-							<table cellspacing="0" cellpadding="0" class="docTableColumn" id="popTableHeaer">
-								<!--<colgroup>
-									<col style="width:18%">
-									<col style="width:18%">
-									<col style="width:13%">
-									<col style="width:24%">
-									<col style="width:15%">
-									<col style="width:15%">
-									<col style="width:20%">
-									<col style="width:20%">
-								</colgroup>
-								<thead>
-									<tr>
-										<th scope="row">Buyer</th>
-										<th scope="row">PO Number</th>
-										<th scope="row">PO date</th>
-										<th scope="row">Delivery Address</th>
-										<th scope="row">Total Price</th>
-										<th scope="row">Currency</th>
-										<th scope="row">Material</th>
-										<th scope="row">EAN</th>
-									</tr>
-								</thead>-->
-							</table>
-						</div>
-						<!-- 테이블 HEADER(CROSSTAB) END -->
-
-						<!-- 테이블 CONTENTS(CROSSTAB) START -->
-						<div id="popTableContentDiv" style="overflow-y:scroll;height:85px;background: white;" class="batch_tbl_right_divBodyScroll divBodyScroll">
-							<table id="popTableContent">
-								<!--<caption>사용자관리 정보</caption>
-								<colgroup>
-									<col style="width:18%">
-									<col style="width:18%">
-									<col style="width:13%">
-									<col style="width:24%">
-									<col style="width:15%">
-									<col style="width:15%">
-									<col style="width:20%">
-									<col style="width:20%">
-								</colgroup>
-								<tbody>
-									<tr class="originalTr" data-seq="301">
-										<td><input type="text" value="WESTCOAST" class="inputst_box03_15radius" data-originalvalue="WESTCOAST"></td>
-										<td><input type="text" value="Q491325" class="inputst_box03_15radius" data-originalvalue="Q491325"></td>
-										<td><input type="text" value="18/06/18" class="inputst_box03_15radius" data-originalvalue="18/06/18"></td>
-										<td><input type="text" value="WILFORD INDUSTRIAL ESTATE.." class="inputst_box03_15radius" data-originalvalue="WILFORD INDUSTRIAL ESTATE.."></td>
-										<td><input type="text" value="396000.00" class="inputst_box03_15radius" data-originalvalue="396000.00"></td>
-										<td><input type="text" value="396000.00" class="inputst_box03_15radius" data-originalvalue="396000.00"></td>
-										<td><input type="text" value="LC34H890WJUXEN" class="inputst_box03_15radius" data-originalvalue="LC34H890WJUXEN"></td>
-										<td><input type="text" value="" class="inputst_box03_15radius" data-originalvalue=""></td>
-									</tr>
-									<tr class="originalTr" data-seq="302">
-										<td><input type="text" value="WESTCOAST" class="inputst_box03_15radius" data-originalvalue="WESTCOAST"></td>
-										<td><input type="text" value="Q491325" class="inputst_box03_15radius" data-originalvalue="Q491325"></td>
-										<td><input type="text" value="18/06/18" class="inputst_box03_15radius" data-originalvalue="18/06/18"></td>
-										<td><input type="text" value="WILFORD INDUSTRIAL ESTATE.." class="inputst_box03_15radius" data-originalvalue="WILFORD INDUSTRIAL ESTATE.."></td>
-										<td><input type="text" value="396000.00" class="inputst_box03_15radius" data-originalvalue="396000.00"></td>
-										<td><input type="text" value="396000.00" class="inputst_box03_15radius" data-originalvalue="396000.00"></td>
-										<td><input type="text" value="LC34H890WJUXEN" class="inputst_box03_15radius" data-originalvalue="LC34H890WJUXEN"></td>
-										<td><input type="text" value="" class="inputst_box03_15radius" data-originalvalue=""></td>
-									</tr>
-									<tr class="originalTr" data-seq="303">
-										<td><input type="text" value="WESTCOAST" class="inputst_box03_15radius" data-originalvalue="WESTCOAST"></td>
-										<td><input type="text" value="Q491325" class="inputst_box03_15radius" data-originalvalue="Q491325"></td>
-										<td><input type="text" value="18/06/18" class="inputst_box03_15radius" data-originalvalue="18/06/18"></td>
-										<td><input type="text" value="WILFORD INDUSTRIAL ESTATE.." class="inputst_box03_15radius" data-originalvalue="WILFORD INDUSTRIAL ESTATE.."></td>
-										<td><input type="text" value="396000.00" class="inputst_box03_15radius" data-originalvalue="396000.00"></td>
-										<td><input type="text" value="396000.00" class="inputst_box03_15radius" data-originalvalue="396000.00"></td>
-										<td><input type="text" value="LC34H890WJUXEN" class="inputst_box03_15radius" data-originalvalue="LC34H890WJUXEN"></td>
-										<td><input type="text" value="" class="inputst_box03_15radius" data-originalvalue=""></td>
-									</tr>
-									<tr class="originalTr" data-seq="304">
-										<td><input type="text" value="WESTCOAST" class="inputst_box03_15radius" data-originalvalue="WESTCOAST"></td>
-										<td><input type="text" value="Q491325" class="inputst_box03_15radius" data-originalvalue="Q491325"></td>
-										<td><input type="text" value="18/06/18" class="inputst_box03_15radius" data-originalvalue="18/06/18"></td>
-										<td><input type="text" value="WILFORD INDUSTRIAL ESTATE.." class="inputst_box03_15radius" data-originalvalue="WILFORD INDUSTRIAL ESTATE.."></td>
-										<td><input type="text" value="396000.00" class="inputst_box03_15radius" data-originalvalue="396000.00"></td>
-										<td><input type="text" value="396000.00" class="inputst_box03_15radius" data-originalvalue="396000.00"></td>
-										<td><input type="text" value="LC34H890WJUXEN" class="inputst_box03_15radius" data-originalvalue="LC34H890WJUXEN"></td>
-										<td><input type="text" value="" class="inputst_box03_15radius" data-originalvalue=""></td>
-									</tr>
-
-								</tbody>-->
-							</table>
-							<!-- 테이블 CONTENTS(CROSSTAB) END -->
+				</div>
+				<div class="pop_content_L_multi">
+					<div class="pop_content_L_leftTop">
+						<div class="pop_single_row">
+							<div class="pop_single_row_col_50">
+								<div class="col_title_wrap"><p class="col_title">공급자<b class="redFont">*</b></p></div>
+								<div class="col_contents_02">
+									<input type="text" class="ipt_st02" value="null">
+								</div>
+							</div>
+							<div class="pop_single_row_col_50">
+								<div class="col_title_wrap"><p class="col_title">현장명<b class="redFont">*</b></p></div>
+								<div class="col_contents_02">
+									<input type="text" class="ipt_st02" value="null">
+								</div>
+							</div>
 						</div>
 					</div>
-					<!-- // 문서 정보 (하단) -->
+
+					<div class="pop_content_L_leftBottom">
+						<div class="table_style03" style="height: 100%;">
+							<div id="pop_multiTbl_header" class="batch_tbl_right_header" style="overflow-x:hidden; overflow-y:hidden;">
+								<table id="popTableHeaer">
+
+								</table>
+							</div>
+							<div id="popTableContentDiv" style="overflow-y:scroll;height:100%;background: white;">
+								<table id="popTableContent">
+
+								</table>
+							</div>
+						</div>	
+					</div>
+				</div>
+				<div class="pop_content_R">
+					<div class="PopupImg_wrap">
+						<img id="PopupImg" src="" style="height: 99%; width: 100%;">
+						<img id="PopupImgLoading" src="/image/ajax_loader.gif" style="display: none; width: 100px; height: 100px; position: relative; top:45%; left: 45%;">
+					</div>
+					<div class="doc_pop_btn_wrap">
+						<div class="pop_returnBigo_wrap"><p class="col_title">비고</p></div>
+						<input type="text" id="pop_returnBigo">
+						<button type="button" id="btn_pop_send" class="button_st4">전송</button>
+						<button type="button" id="btn_header_userPop_save" class="button_st4">저장</button>
+						<button type="button" id="btn_pop_ui_close" class="button_st4 cbtn">닫기</button>
+					</div>
 				</div>
 			</div>
-            <div class="pop_footer">
-                <button type="button" id="btn_header_userPop_insert" class="button_st4" style="float:left;">추가</button>
-                <button type="button" id="btn_header_userPop_save" class="button_st4 cbtn">저장</button>
-                <button type="button" id="btn_header_userPop_cancel" class="button_st4 cbtn">닫기</button>
-            </div>
+			
 		</div>
 	</div>
 </div>
 <!-- //팝업_양식이미지 -->
-
-<!-- 팝업_재학습 -->
-<!--<div id="retrainPop" class="poplayer batch_pop2">
-    <div class="bg"></div>
-    <div class="pop_layer">
-        <div class="pop_popup0" style="width:1860px">
-            <div class="pop_header">
-                <h1>재학습</h1>
-            </div>
-            <div class="pop_content">
-                <div class="box_content_L st_last">
-                    <h3 class="layer2_tits">
-                        <span class="layer2_tits_span">양식이미지</span>
-                    </h3>
-                    <div class="box_content_bg">
-
-                        <div class="imgtmb_b mCustomScrollbar" data-mcs-axis="yx" data-mcs-theme="dark-3">
-                            <div id="img_content">
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="box_content_R st_last">
-                    <div class="box_content_bg">
-                        <div class="title">
-                            <h3 class="tits">
-                                <span class="mr10">문서 양식 예측</span>
-                                <b id="docName" class="mr5">문서양식이름</b>   <b id="docPredictionScore">12%</b>
-                            </h3>
-                            <button type="button" id="docCompareBtn" class="tits11_btn01"></button>
-                            <div class="fr">
-                                <button type="button" id="uiTrainBtn" class="button_st1"><i class="train_icon_03"></i><p>Add Training</p></button>
-                            </div>
-                            <div id="uiDocTopTypeDiv" class="fr um_select">
-                                <select id="uiDocTopType">
-                                    <option>Test</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mCustomScrollbar box_scroll_st99" data-mcs-theme="dark-3">
-                            <input type="hidden" id="resultJson" />
-                            <div class="table_style02">
-                                <table>
-                                    <caption>양식 분석 상세 정보</caption>
-                                    <colgroup>
-                                        <col style="width:60%" />
-                                        <col style="width:40%" />
-                                    </colgroup>
-                                    <thead>
-                                        <tr>
-                                            <th scope="row">추출 텍스트</th>
-                                            <th scope="row">DB 컬럼</th>
-                                        </tr>
-                                    </thead>
-                                </table>
-                                <div id="textResultTbl" class="box_table_st box_table_st04">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="pop_footer">
-                <button type="button" id="btn_pop_ui_close" class="button_st4 cbtn">닫기</button>
-            </div>
-        </div>
-    </div>
-</div>-->
-<!-- //팝업_재학습 -->

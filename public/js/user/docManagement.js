@@ -4,7 +4,7 @@ var labels;
 var datas;
 var numClicks = 0;
 var timeOut;
-
+var saveFlag = false // 팝업 저장
 $(function () {
     _init();
 });
@@ -16,6 +16,7 @@ function _init() {
     datePickerEvent(); // datePicker 적용
     clickEventHandlers();
     selectDocTopType(); // 대메뉴 조회(docTopType)
+    scrollPoptable(); // 팝업창 테이블 가로세로 스크롤
 }
 
 // 버튼 이벤트 핸들러 함수 모음
@@ -27,6 +28,7 @@ function clickEventHandlers() {
     btnSendClick(); // 전송 버튼
     btnReportClick(); // 보고서 생성 버튼
     hideBtnClick(); // 미리보기 이미지 숨김버튼
+    clickPopCloseBtn(); // 팝업 닫기 버튼
 }
 
 // 문서양식 조회 및 select box 렌더링
@@ -312,11 +314,13 @@ function appendMLData(docLabelList, docDataList) {
 function appendSingleHTML(docDataList, docTopType) {
     var returnHTML = '';
     for (var i in docDataList) {
+        var returnBigo = (docDataList[i].RETURNBIGO == null) ? "" : docDataList[i].RETURNBIGO.trim();
         var mlDataListHTML = '' +
             '<tr class="originalTr">' +
             '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="hidden" value="' + docDataList[i].SEQ + '" name="seqOri" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
             '<td>' +
-            '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +')">' +
+            '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +', this)">' +
+            // '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +','+docDataList[i].AUTOSENDTIME.substring(0,4)+docDataList[i].AUTOSENDTIME.substring(5,7)+', this)">' +
             '<input type="text" value="' + docDataList[i].FILENAME.substring(docDataList[i].FILENAME.lastIndexOf('/') + 1) + '" class="inputst_box03_15radius fileNameInput" data-originalvalue="' + docDataList[i].FILENAME + '" disabled>' +
             '</a>' +
             '</td>' +
@@ -325,7 +329,7 @@ function appendSingleHTML(docDataList, docTopType) {
             '<td><input type="text" value="' + docDataList[i].KORNM + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].KORNM + '" disabled></td>' +
             '<td><input type="text" value="' + docDataList[i].AUTOSENDTIME + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].AUTOSENDTIME + '" disabled></td>' +
             '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>' +
-            '<td><input type="text" value="" class="inputst_box03_15radius" data-originalvalue=""></td>';
+            '<td><input type="text" value="' + returnBigo + '" class="inputst_box03_15radius" data-originalvalue="' +returnBigo + '"></td>';
         var items = docDataList[i].EXPORTDATA;
         items = items.replace(/\"/gi, '').slice(1, -1);
         items = items.split(',');
@@ -358,7 +362,7 @@ function appendMultiHTML(docLabelList, docDataList, docTopType) {
         // 가장 많은 multi entry의 y축 좌표값 구하기
         var multiEntryInfo = getMultiLabelYLoc(docDataList[i].EXPORTDATA, multiLabelNumArr);
         multiLabelYLocArr = multiEntryInfo.dataArr;
-
+        var returnBigo = (docDataList[i].RETURNBIGO == null) ? "" : docDataList[i].RETURNBIGO.trim();
         for (var k = 0; k < multiEntryInfo.dataCount; k++) {
             var mlDataListHTML;
 
@@ -368,7 +372,8 @@ function appendMultiHTML(docLabelList, docDataList, docTopType) {
                     '<tr class="originalTr">' +
                     '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="hidden" value="' + docDataList[i].SEQ + '" name="seqOri" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
                     '<td>' +
-                    '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +')">' +
+                    // '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +','+docDataList[i].AUTOSENDTIME.substring(0,4)+docDataList[i].AUTOSENDTIME.substring(5,7)+', this)">' +
+                    '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +', this)">' +
                     '<input type="text" value="' + docDataList[i].FILENAME.substring(docDataList[i].FILENAME.lastIndexOf('/') + 1) + '" class="inputst_box03_15radius fileNameInput" data-originalvalue="' + docDataList[i].FILENAME + '" disabled>' +
                     '</a>' +
                     '</td>' +
@@ -377,7 +382,7 @@ function appendMultiHTML(docLabelList, docDataList, docTopType) {
                     '<td><input type="text" value="' + docDataList[i].KORNM + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].KORNM + '" disabled></td>' +
                     '<td><input type="text" value="' + docDataList[i].AUTOSENDTIME + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].AUTOSENDTIME + '" disabled></td>' +
                     '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>' + 
-                    '<td><input type="text" value="" class="inputst_box03_15radius" data-originalvalue=""></td>';
+                    '<td><input type="text" value="' + returnBigo +'" class="inputst_box03_15radius" data-originalvalue="' + returnBigo +'"></td>';
             } else {
                 mlDataListHTML = '' +
                     '<tr class="multiTr_' + docDataList[i].SEQ + '">' +
@@ -479,13 +484,27 @@ function startClick(fileName, seq) {
 }
 
 //이미지 팝업 이벤트
-function openImagePop(fileName, seq, docTopType) {
+// function openImagePop(fileName, seq, docTopType, fileTime,  selectObject) {
+function openImagePop(fileName, seq, docTopType,   selectObject) {
     clearTimeout(timeOut);
-    console.log(docTopType);
+    $('#PopupImg').hide();
     var convertFilePath = fileName.split('.pdf')[0] + '-0.jpg';
-    $('#PopupImg').attr('src', convertFilePath.replace(/\/uploads/, '/img'));
-    appendPopTable(fileName, seq, docTopType);
+    $('#PopupImgLoading').show();
+    var img = $('#PopupImg')[0];
+    img.onload = function(){
+        $('#PopupImgLoading').hide();
+        $('#PopupImg').show();
+    };
+    img.src = convertFilePath.replace(/\/uploads/, '/img');
+
+    // var convertFilePath = fileName.split('.pdf')[0] + '-0.jpg';
+    // $('#PopupImg').attr('src', '');
+    // $('#PopupImg').attr('src', convertFilePath.replace(/\/uploads/, '/img'));
+    // $('#PopupImg').attr('src', convertFilePath.replace(/\/uploads/, '/img/'+convertFilePath.split("/")[4].split("_")[0]+"/"+fileTime));
+    appendPopTable(fileName, seq, docTopType, selectObject);
+    makeToDataForSend(convertFilePath, selectObject);
     layer_open('docPop');
+    setDivHeight();
     numClicks = 0;
 
     return false;
@@ -530,8 +549,161 @@ function hideBtnClick(){
     })
 }
 
-// 이미지 파업 하단 테이블 렌더링
+// 이미지 팝업 렌더링
 function appendPopTable(fileName, seq, docTopType) {
+
+    // 팝업 초기화
+    $('.pop_content_L_leftTop').empty();
+    $('#popTableContent').empty();
+
+    var targetNum = 0;
+    $('.fileNameInput').each(function (i, e) {
+        if ($(e).attr('data-originalvalue') == fileName) {
+            targetNum = i;
+        }
+    });
+
+    // 비고
+    $('#pop_returnBigo').val('').val($('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(7).find('input').eq(0).val());
+
+    var docEntryMultiChk = false; // 멀티 엔트리 양식 문서인지 확인
+    for(var i = 0; i< labels.length; i++) {
+        if(labels[i].AMOUNT == 'multi') {
+            docEntryMultiChk = true;
+            break;
+        }
+    }
+
+    //single 문서일때
+    if(!docEntryMultiChk) {
+        var popSingleLableRowHtml = '';
+        var popSingleEntryRowHtml = '';
+        $('.pop_content_L_single').show();
+        $('.pop_content_L_multi').hide();
+        if (labels.length > 0) {
+            //레이블 렌더링
+            for (var i in labels) {
+                popSingleLableRowHtml += '<div class="pop_single_row">' +
+                        '<div class="pop_single_row_col_100">' +
+                        '<div class="col_title_wrap"><p class="col_title">' + labels[i].KORNM + '</p></div>' +
+                        '<div class="col_contents_02">' +
+                        '</div>' + 
+                        '</div>' +
+                        '</div>';
+            }
+            $('.pop_content_L_leftTop').append(popSingleLableRowHtml);
+
+            // 엔트리 렌더링
+            var cnt = 0;
+            for (var i = 8; i < 8 + labels.length; i++) {
+                var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
+                popSingleEntryRowHtml = '<input type="text" value="' + valueText + '" class="inputst_box03_15radius sigleEntryIpt entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' +  labels[i-8].SEQNUM + '" data-amount="' + labels[i-8].AMOUNT + '">';
+                $('.pop_single_row_col_100').eq(cnt).find('.col_contents_02').append(popSingleEntryRowHtml);
+                cnt++;
+            }
+            
+        } else {
+            // 미분류 문서
+            for (var i = 8; i < 8 + datas[0].EXPORTDATA.split(',').length; i++) {
+                var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
+                
+                popSingleEntryRowHtml += '<div class="pop_single_row">' +
+                        '<div class="pop_single_row_col_100">' +
+                        '<input type="text" value="' + valueText + '" class="inputst_box03_15radius sigleEntryIpt entryIpt" data-originalvalue="' + valueText + '">' +
+                        '</div>' + 
+                        '</div>';                                         
+            }
+            $('.pop_content_L_single .pop_content_L_leftTop').append(popSingleEntryRowHtml);
+        }
+
+    } else { // multi 문서일때
+        var popMultiLableRowHtml = '';
+        var popMultiEntryRowHtml = '';
+        var popTableHeaderColHTML = '';
+        var popTableBodyColHTML = '';
+        var popTableColHTML = '<colgroup>';
+        var appendMultiTableHeadHtml = '<thead><tr>';
+        var singleNumList = [];
+        var multiNumList = [];
+        $('.pop_content_L_single').hide();
+        $('.pop_content_L_multi').show();
+
+
+        //레이블 렌더링
+        for (var i in labels) {
+            if(labels[i].AMOUNT == 'single') {
+                singleNumList.push(i);
+                if(labels.length - 1 == i && singleNumList.length % 2 == 1) {
+                    popMultiLableRowHtml += '<div class="pop_single_row"><div class="pop_single_row_col_50">' + 
+                    '<div class="col_title_wrap"><p class="col_title">' + labels[i].KORNM + '</p></div>' + 
+                    '<div class="col_contents_02">' +
+                    '<input type="text" class="inputst_box03_15radius sigleEntryIpt entryIpt" data-lableSeq="' +  labels[i].SEQNUM + '" data-amount="' + labels[i].AMOUNT + '">' + 
+                    '</div></div></div>'; 
+                }
+                else if(singleNumList.length % 2 == 0) {
+                    popMultiLableRowHtml += '<div class="pop_single_row_col_50">' + 
+                            '<div class="col_title_wrap"><p class="col_title">' + labels[i].KORNM + '</p></div>' + 
+                            '<div class="col_contents_02">' +
+                            '<input type="text" class="inputst_box03_15radius sigleEntryIpt entryIpt" data-lableSeq="' +  labels[i].SEQNUM + '" data-amount="' + labels[i].AMOUNT + '">' + 
+                            '</div></div></div>';  
+                }
+                else if(singleNumList.length == 1 || singleNumList.length % 2 == 1) {
+                    popMultiLableRowHtml += '<div class="pop_single_row"><div class="pop_single_row_col_50">' + 
+                            '<div class="col_title_wrap"><p class="col_title">' + labels[i].KORNM + '</p></div>' + 
+                            '<div class="col_contents_02">' +
+                            '<input type="text" class="inputst_box03_15radius sigleEntryIpt entryIpt" data-lableSeq="' +  labels[i].SEQNUM + '" data-amount="' + labels[i].AMOUNT + '">' + 
+                            '</div></div>';          
+                }
+            } else if(labels[i].AMOUNT == 'multi') {
+                appendMultiTableHeadHtml += '<th scope="row">' + labels[i].KORNM + '</th>';
+                popTableColHTML += '<col style="width:180px">';
+                multiNumList.push(i);
+
+            }
+            
+        }
+        popMultiLableRowHtml += '</div>'
+        popTableHeaderColHTML += popTableColHTML + '<col style="width:8px"></colgroup>';
+        popTableBodyColHTML += popTableColHTML + '</colgroup>';
+        appendMultiTableHeadHtml += '<th></th></tr></thead>'
+        
+        $('#popTableHeaer').html('').append(popTableHeaderColHTML + appendMultiTableHeadHtml);
+
+        $('.pop_content_L_multi .pop_content_L_leftTop').append(popMultiLableRowHtml);
+
+        // single 엔트리 렌더링
+        for (var i = 0; i < singleNumList.length; i++) {
+            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(Number(singleNumList[i]) + 8).find('input').eq(0).val();
+            $('.sigleEntryIpt').eq(i).val(valueText).attr('data-originalvalue', valueText);
+        }
+
+        // multi 엔트리 렌더링
+        popMultiEntryRowHtml += '<tr>';
+        for (var i = 0; i < multiNumList.length; i++) {
+            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(Number(multiNumList[i]) + 8).find('input').eq(0).val();
+            popMultiEntryRowHtml += '<td><input type="text" value="' + valueText + '" class="content right_border entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' + labels[multiNumList[i]].SEQNUM + '" data-amount="' + labels[multiNumList[i]].AMOUNT + '"></td>';
+        }
+        popMultiEntryRowHtml += '</tr>';
+
+        if ($('.multiTr_' + seq).length > 0) {       
+            for (var i = 0; i < $('.multiTr_' + seq).length; i++) {
+                popMultiEntryRowHtml += '<tr>'
+                for (var j = 0; j < multiNumList.length; j++) {
+                    var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(Number(multiNumList[j]) + 8).find('input').eq(0).val();    
+                    popMultiEntryRowHtml += '<td><input type="text" value="' + valueText + '" class="content right_border entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' + labels[multiNumList[j]].SEQNUM + '" data-amount="' + labels[multiNumList[j]].AMOUNT + '"></td>';
+                }
+                popMultiEntryRowHtml += '</tr>';
+            }
+        }
+
+        $('#popTableContent').append(popTableBodyColHTML + popMultiEntryRowHtml );
+    }  
+}
+
+
+// 팝업 수정 전 원본
+// 이미지 파업 하단 테이블 렌더링
+function appendPopTable2(fileName, seq, docTopType) {
     var popTableHeaderColHTML = '<colgroup>';
     var popTableHeaderTheadHTML = '<thead><tr>';
     var popTableContentHTML = '<tbody>';
@@ -560,7 +732,7 @@ function appendPopTable(fileName, seq, docTopType) {
     if (labels.length > 0) {
         for (var i = 8; i < 8 + labels.length; i++) {
             var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
-
+            
             /*
             if(docTopType == "58" && (i == "10" || i == "12" || i == "13" || i == "14" || i == "16" ))
             {
@@ -690,8 +862,198 @@ function btnInsertClick() {
     });
 }
 
-// 저장 버튼 click 이벤트
 function btnSaveClick() {
+    $('#btn_header_userPop_save').click(function () {
+        if ($('#docTopTypeSelect').val() != 0) {
+            var saveDataArr = [];
+            var typoDataArr = [];
+            var numTypoDataArr = [];
+            var filePath = $('#PopupImg').attr('src').replace('-0.jpg', '.pdf').replace('img','uploads');
+            var TrNum;
+            $('.originalTr').each(function (i, e) {
+                if ($(e).children().eq(1).find('input').attr('data-originalvalue') == filePath) {
+                    TrNum = i;
+                }
+            });
+
+            // saveDataArr 추출
+            var singleNum = 0;
+            var multiNumList = [];
+            var lableOrderList = [];
+            for(var i = 0; i < labels.length; i++) {
+                lableOrderList.push(labels[i].SEQNUM);
+                if(labels[i].AMOUNT == 'single') {
+                    saveDataArr[i] = {'type': 'single', 'value':  $('.sigleEntryIpt').eq(singleNum).val()}
+                    singleNum++
+                } else {
+                    multiNumList.push(i);
+                    saveDataArr[i] = {'type': 'multi', 'value': []}
+                }
+            }
+            var $multiTr = $('#popTableContent tr');
+            var multiTrCnt = $multiTr.length;
+            for (var i = 0; i <multiTrCnt; i++) {
+                for(var j = 0; j < multiNumList.length; j++) {
+                    var multiEntryVal = $multiTr.eq(i).find('td').eq(j).find('input').val();
+                    saveDataArr[multiNumList[j]].value.push(multiEntryVal);
+                }
+            }
+
+            var numPattern = /^[0-9| |.|,|+|-]*$/;
+            
+
+
+            // 멀티 entry 있는 문서 numTypoData 추출용 리스트 만들기
+            var rowList = [];
+            var $row = $('#popTableContent').find('tr');
+            var rowLength = $row.length;
+            for(var i = 0; i < rowLength; i++) {  
+                var tempList = [];
+                for(var j = 0; j < $row.eq(i).find('td').length; j++) {
+                    for( var k = 0; k < lableOrderList.length; k++) {
+                        if(lableOrderList[k] == $row.eq(i).find('td').eq(j).find('input').attr('data-lableSeq')) {
+                            tempList[k] = {'orgText': $row.eq(i).find('td').eq(j).find('input').attr('data-originalvalue'), 'updText': $row.eq(i).find('td').eq(j).find('input').val()}
+                        }
+                    }
+                }
+                rowList[i] = tempList;
+
+                for(var j = 0; j < $('.sigleEntryIpt').length; j++) {
+                    for( var k = 0; k < lableOrderList.length; k++) {      
+                        if(lableOrderList[k] == $('.sigleEntryIpt').eq(j).attr('data-lableSeq')) {
+                            rowList[i][k] = {'orgText': $('.sigleEntryIpt').eq(j).attr('data-originalvalue'), 'updText': $('.sigleEntryIpt').eq(j).val()}
+                        }
+                    }
+                    
+                }
+            }
+
+            // 멀티entry 있는 문서 numTypoData 추출
+            for(var i = 0 ; i < rowList.length; i++) {
+                var numTypoData = [];
+                var numTypoBool = false;
+                for(var j = 0; j < labels.length; j++) {
+                    var orgText =  rowList[i][j].orgText;
+                    var updText =  rowList[i][j].updText;
+                    
+                    if (orgText != updText) {
+    
+                        if ( ($('#docTopTypeSelect').val() == "51" || $('#docTopTypeSelect').val() == "59") && (j == 2 || j == 3)) {
+                            numTypoData.push({ 'orgText': orgText, 'updText': updText });
+                            numTypoBool = true;
+                        } else if ( $('#docTopTypeSelect').val() == "61" && (j == 6 || j == 7 || j == 8 || j == 9 )) {
+                            numTypoData.push({ 'orgText': orgText, 'updText': updText });
+                            numTypoBool = true;
+                        } else {
+                            //typoDataArr.push({ 'orgText': orgText, 'updText': updText });
+                            numTypoData.push({ 'orgText': updText });
+                        }
+    
+                    }else {
+                        numTypoData.push({'orgText': orgText});
+                    }
+                }
+                if (numTypoBool) {
+                    numTypoDataArr.push(numTypoData);
+                }
+            }
+
+            //typoDataArr 추출
+            var $entryIpt = $('.entryIpt');
+            var entryIptCnt = $entryIpt.length;
+            var numTypoData = [];
+            for (var i = 0; i < entryIptCnt; i++) {
+                var numTypoBool = false;
+                var lableSeq = $entryIpt.eq(i).attr('data-lableSeq');
+                var orgText = $entryIpt.eq(i).attr('data-originalvalue');
+                var updText = $entryIpt.eq(i).val();
+                var amount = $entryIpt.eq(i).attr('data-amount');
+                
+
+                if (orgText != updText) {
+
+                    if ( ($('#docTopTypeSelect').val() == "51" || $('#docTopTypeSelect').val() == "59") && (lableSeq == 505 || lableSeq == 506 || lableSeq == 818 || lableSeq == 819)) {
+                        
+                    } else if( $('#docTopTypeSelect').val() == "58" && (lableSeq == 767 || lableSeq == 768 || lableSeq == 770 || lableSeq == 771 || lableSeq == 772 || lableSeq == 792 )) {
+
+                    } else if ( $('#docTopTypeSelect').val() == "61" && (lableSeq == 877 || lableSeq == 878 || lableSeq == 879 || lableSeq == 880)) {
+
+                    } else {
+                        typoDataArr.push({ 'orgText': orgText, 'updText': updText });
+                    }
+                }   
+            }
+
+            // 싱글문서 numTypoBool 추출
+            if($('#docTopTypeSelect').val() == "58") {
+                var numTypoData = [];
+                var numTypoBool = false;
+                for(var i = 0; i < $('.sigleEntryIpt').length; i++) {
+                    var orgText = $('.sigleEntryIpt').eq(i).attr('data-originalvalue');
+                    var updText = $('.sigleEntryIpt').eq(i).val();
+
+                    if (orgText != updText) {
+                        if((i == 5 || i == 6 || i == 8 || i == 9 || i== 10 || i == 12)) {
+                            numTypoData.push({ 'orgText': orgText, 'updText': updText });
+                            numTypoBool = true;
+                        } else {
+                            //typoDataArr.push({ 'orgText': orgText, 'updText': updText });
+                            numTypoData.push({ 'orgText': updText });
+                        }
+                    }else {
+                        numTypoData.push({'orgText': orgText});
+                    }
+                }
+                if (numTypoBool) {
+                    numTypoDataArr.push(numTypoData);
+                }
+            }
+
+            var saveJson = {
+                'filePath': filePath,
+                'data': saveDataArr,
+                'typoData': typoDataArr,
+                'numTypoData': numTypoDataArr,
+                'docTopType': $('#docTopTypeSelect').val()
+            };
+
+            $.ajax({
+                url: '/docManagement/updateBatchPoMlExport',
+                type: 'post',
+                datatype: 'json',
+                data: JSON.stringify(saveJson),
+                contentType: 'application/json; charset=UTF-8',
+                beforeSend: function () {
+                    $('#progressMsgTitle').html("저장 중..");
+                    progressId = showProgressBar();
+                },
+                success: function (data) {
+                    console.log(data)
+                    if (!data.error) {
+                        fn_alert('alert', '저장 성공');
+                        saveFlag = true;
+                        //$('.li_paging.active > a').click();
+                    } else {
+                        fn_alert('alert', 'ERROR');
+                        saveFlag = false;
+                    }
+                    endProgressBar(progressId);
+                },
+                error: function (err) {
+                    console.log(err);
+                    fn_alert('alert', 'ERROR');
+                    endProgressBar(progressId);
+                }
+            });
+        } else {
+            fn_alert('alert', '미분류 문서는 저장할 수 없습니다.');
+        }
+    });
+}
+
+//12-10 팝업 수정 전 원본
+// 저장 버튼 click 이벤트
+function btnSaveClick2() {
     $('#btn_header_userPop_save').click(function () {
         if ($('#docTopTypeSelect').val() != 0) {
             var saveDataArr = [];
@@ -834,6 +1196,128 @@ function btnReportClick() {
     });
 }
 
+// 팝업 전송 버튼 click 이벤트
+function makeToDataForSend(convertFilePath, selectObject) {
+    $('#btn_pop_send').off().on('click', function () {
+        var updateFlag = false;
+        var $entryIpt = $('.entryIpt');
+        var entryIptLength = $entryIpt.length;
+        for(var i = 0; i< entryIptLength; i++) {
+            var originVal = $entryIpt.eq(i).attr('data-originalvalue');
+            var updateVal = $entryIpt.eq(i).val();
+
+            if(originVal != updateVal){
+                updateFlag = true;
+                break;
+            }
+        }
+        if(!saveFlag) {
+            if(updateFlag) {
+                fn_alert('alert', '수정 후에는 저장 후 전송을 눌러주세요.');
+                return false;
+            }
+        }
+        var sendJson = [];
+        var sendDocCount = 0;
+        var invoiceType;
+        var fileName = convertFilePath;
+        $('#docTopTypeSelect > option').each(function (i, e) {
+            if ($(e).text() == $('.selected.area').eq(0).text()) invoiceType = $(e).attr('alt');
+        });
+
+        var $selectObject = $(selectObject);
+        var itemJson = {
+            'sequence': $selectObject.closest('td').prev().find('input[name="listCheck"]').prev().prev().prev().val(),
+            'inviceType': invoiceType,
+            'cdSite': $selectObject.closest('tr').children().eq(2).find('input').val().split('_')[0],
+            'editFileName': '',
+            'scanDate': $selectObject.closest('tr').children().eq(5).find('input').val().replace(/[^(0-9)]/gi, '').replace(/(\s*)/,''),
+            'returnBigo': $('#pop_returnBigo').val(),
+            'ivgtrRes': $selectObject.closest('td').prev().find('input[name="listCheck"]').prev().prev().val() == "null" ? 'N':'Y',
+            'ivgtrNoSral': $selectObject.closest('td').prev().find('input[name="listCheck"]').prev().prev().val() == "null" ? 0:$selectObject.closest('td').prev().find('input[name="listCheck"]').prev().prev().val(),
+            'sendDate': getTimeStamp(),
+            'fileName': fileName
+        }
+
+        var ocrDataArr = [];
+        var ocrDataItem = {};
+
+        //single
+        var $sigleEntryIpt = $('.sigleEntryIpt');
+        var sigleEntryIptLength = $sigleEntryIpt.length;
+        for(var i = 0; i < sigleEntryIptLength; i++) {
+            for(var j = 0; j < labels.length; j++) {
+                if($sigleEntryIpt.eq(i).attr('data-lableSeq') == labels[j].SEQNUM) {
+                    ocrDataItem = {
+                        'engKey': labels[j].ENGNM,
+                        'korKey': labels[j].KORNM,
+                        'cnt': '1',
+                        'keyValue': [{ 'value': $sigleEntryIpt.eq(i).val() }]
+                    };
+                    ocrDataArr[j] = ocrDataItem;
+                }
+            }
+        }
+        
+        //multi
+        var $row = $('#popTableContent').find('tr');
+        var rowLength = $row.length;
+        for (var i = 0; i < labels.length; i++) {
+            var tempArr = [];
+            if (labels[i].AMOUNT == 'multi') { 
+                for(var j = 0; j < rowLength; j++) {
+                    var $td = $row.eq(j).find('td');
+                    var tdLength = $td.length;
+                    for(var k = 0; k < tdLength; k++) {
+                        if($td.eq(k).find('input').attr('data-lableSeq') == labels[i].SEQNUM) {
+                            tempArr.push({'value': $td.eq(k).find('input').val()});
+                        }
+                    }
+                    ocrDataItem = {
+                        'engKey': labels[i].ENGNM,
+                        'korKey': labels[i].KORNM,
+                        'cnt': String(rowLength),
+                        'keyValue': tempArr
+                    };
+                       
+                }
+                
+
+                ocrDataArr[i] = ocrDataItem;
+            }
+        }
+        console.log(itemJson);
+        itemJson.ocrData = ocrDataArr;
+        sendJson.push(itemJson);
+
+        // 데이터 전송하기
+        $.ajax({
+            url: '/docManagement/sendOcrData',
+            type: 'post',
+            datatype: 'json',
+            data: JSON.stringify({ 'sendData': sendJson, 'dataCnt': String(1) }),
+            contentType: 'application/json; charset=UTF-8',
+            beforeSend: function () {
+                $('#progressMsgTitle').html("전송 중..");
+                progressId = showProgressBar();
+            },
+            success: function (data) {
+                console.log(data);
+                if (!data.error) {
+                    fn_alert('alert', '전송 실패 했습니다.');
+                } else {
+                    fn_alert('alert', '전송 성공 했습니다.');
+                }
+                endProgressBar(progressId);
+            },
+            error: function (err) {
+                console.log(err);
+                fn_alert('alert', 'ERROR');
+                endProgressBar(progressId);
+            }
+        });
+    });
+}
 
 // 전송 버튼 click 이벤트
 function btnSendClick() {
@@ -1006,4 +1490,41 @@ function appendPaging(curPage, totalCount) {
     paging_result += '</ul>';
     
     return paging_result;
+}
+
+function scrollPoptable () {
+    // popTableContentDiv 스크롤이 동작할때에 함수를 불러옵니다.
+    $('#popTableContentDiv').scroll(function () {
+        // popTableContentDiv x좌표가 움직인 거리를 가져옵니다.
+        var xPoint = $('#popTableContentDiv').scrollLeft();
+
+        // 가져온 x좌표를 pop_multiTbl_header에 적용시켜 같이 움직일수 있도록 합니다.
+        $('#pop_multiTbl_header').scrollLeft(xPoint);
+    });
+
+}
+
+
+function setDivHeight()
+{
+
+        var objSet   = $('.pop_content_L_leftBottom')[0];
+        var objTarHeight= $('.pop_content_L_multi .pop_content_L_leftTop')[0].offsetHeight;
+     
+        objSet.style.height  = ((810 - objTarHeight)) + "px";
+
+        var objSet   = $('#popTableContentDiv')[0];
+        var objTarHeight= $('.pop_content_L_leftBottom .table_style03')[0].offsetHeight;
+     
+        objSet.style.height  = ((objTarHeight - 44)) + "px";
+
+}
+
+function clickPopCloseBtn () {
+    $('#btn_pop_ui_close').click(function(){
+        if(saveFlag) {
+            $('.li_paging.active > a').click();
+            saveFlag = false;
+        }
+    })
 }

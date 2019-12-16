@@ -19,6 +19,8 @@ var transPantternVar = require('./transPattern');
 var batch = require('../util/batch.js');
 var ocrUtil = require('../util/ocr.js');
 
+var date = require('date-utils');
+
 var ocrJs = require('../util/ocr.js');
 var propertiesConfig = require(appRoot + '/config/propertiesConfig.js');
 
@@ -91,7 +93,11 @@ router.post('/uiLearnTraining', function (req, res) {
 function uiLearnTraining_new(filepath, isAuto, callback) {
     sync.fiber(function () {
         try{
-            var icrRestResult = sync.await(ocrUtil.icrRest(filepath, isAuto, sync.defer()));
+            // var dt = new Date(); 
+            var filename = (filepath.lastIndexOf("/") != -1) ? filepath.slice(filepath.lastIndexOf("/") + 1) : filepath;
+            var dt = sync.await(oracle.selectDocScanDate(filepath, sync.defer()));
+            // dt.toFormat('YYYYMM');
+            var icrRestResult = sync.await(ocrUtil.icrRest(filepath, dt, isAuto, sync.defer()));
             // pythonConfig.columnMappingOptions.args = [];
             // pythonConfig.columnMappingOptions.args.push(filepath);
             // var resPyStr = sync.await(PythonShell.run('pyOcr.py', pythonConfig.columnMappingOptions, sync.defer()));
@@ -128,11 +134,19 @@ function uiLearnTraining_new(filepath, isAuto, callback) {
                         for(var jj = 0; jj < labelData.rows.length; jj++) {
                             if(retData.data[ii]["entryLbl"] == labelData.rows[jj].SEQNUM) {
                                 var re = new RegExp(labelData.rows[jj].VALID,'gi');   
-                                var keyParts = retData.data[ii]["text"].match(re); 
-                                if(keyParts != null && labelData.rows[jj].SEQNUM !="504")
+                                if(retData.data[ii]["text"] != null)
                                 {
-                                    retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
+                                    var keyParts = retData.data[ii]["text"].match(re); 
+                                    if(keyParts != null && labelData.rows[jj].SEQNUM !="504" && labelData.rows[jj].SEQNUM !="877")
+                                    {
+                                        retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
+                                    } 
                                 }
+                                // var keyParts = retData.data[ii]["text"].match(re); 
+                                // if(keyParts != null && labelData.rows[jj].SEQNUM !="504")
+                                // {
+                                //     retData.data[ii]["text"] = keyParts.toString().replace(/,/gi,'');
+                                // }
                             }                                
                         }
                     }                        
@@ -147,9 +161,14 @@ function uiLearnTraining_new(filepath, isAuto, callback) {
                     sync.await(oracle.insertBatchPoMlExportFromUi([retData.docCategory.DOCTOPTYPE, propertiesConfig.auto.ftpFileUrl+filepath, exportData], sync.defer()));
                 }
 
+                // retData.fileinfo = {
+                //     filepath: propertiesConfig.auto.ftpFileUrl + resPyArr[i].originFileName,
+                //     convertFilepath: propertiesConfig.auto.ftpFileUrl + resPyArr[i].convertFileName
+                // };
+
                 retData.fileinfo = {
-                    filepath: propertiesConfig.auto.ftpFileUrl + resPyArr[i].originFileName,
-                    convertFilepath: propertiesConfig.auto.ftpFileUrl + resPyArr[i].convertFileName
+                    filepath: propertiesConfig.auto.ftpFileUrl+filepath.split('_')[0]+"/"+dt+"/" + resPyArr[i].originFileName,
+                    convertFilepath: propertiesConfig.auto.ftpFileUrl+filepath.split('_')[0]+"/"+dt+"/" + resPyArr[i].convertFileName
                 };
 
                 retDataList.push(retData);
@@ -1461,10 +1480,14 @@ router.post('/insertDoctypeMapping', function (req, res) {
             var  cnt = 0;
             var sentences = "";
             for (var i in returnObj.docSentenceList)
-            {
-                sentences = sentences + returnObj.docSentenceList[i].text.replace(regExp,"") + ",";
-                cnt ++;
-                if(cnt == 100) {break;}
+            {   
+                if(returnObj.docSentenceList[i].text != null)
+                {
+                    sentences = sentences + returnObj.docSentenceList[i].text.replace(regExp,"") + ",";
+                    cnt ++;
+                    if(cnt == 100) {break;}
+                }
+                
             }
             sentences = sentences.substring(0, sentences.length -1);
             sentences = sentences+"||"+returnObj.docType+"||"+returnObj.docTopType;

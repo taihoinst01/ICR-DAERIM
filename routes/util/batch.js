@@ -274,7 +274,10 @@ function insertDocumentSentence(topSentenses, docType, length, docTopType) {
         var regExp = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/gi;
         var text = "";
         for (var i in topSentenses) {
-            text += topSentenses[i].text.replace(regExp, '') + ",";
+            if(topSentenses[i].text!= null)
+            {
+                text += topSentenses[i].text.replace(regExp, '') + ",";
+            }
 		}
 		//console.log(docTopType);
 		sync.await(oracle.insertDocumentSentence([text.slice(0, -1), docType, length, docTopType], sync.defer()));

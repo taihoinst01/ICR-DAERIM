@@ -137,7 +137,7 @@ function popUpRunEvent() {
 
 			for (var i = 0; i < 100; i++) {
 
-				// console.log(layer4Data.data[i].originText);
+                // console.log(layer4Data.data[i].originText);
 				docSentenceList.push({ "text": layer4Data.data[i].text })
 				docSentence = docSentence + layer4Data.data[i].text;
 			}
@@ -2532,7 +2532,7 @@ function processFromDocManage() {
         var fileInfo = {
             'filePath': filepath
         };
-        processImage(fileInfo, true);
+        processImage(fileInfo, false);
         progressId = showProgressBar();
     }
 }

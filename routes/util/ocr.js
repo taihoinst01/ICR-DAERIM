@@ -12,11 +12,15 @@ var queryConfig = require(appRoot + '/config/queryConfig.js');
 var commonDB = require(appRoot + '/public/js/common.db.js');
 var commonUtil = require(appRoot + '/public/js/common.util.js');
 var oracle = require('../util/oracle.js');
+var ftp = require('ftp');
+var sync = require('./sync.js')
 
 const defaults = {
     encoding: 'utf8',
 };
 
+//FTP 서버 정보
+var ftpConfig = propertiesConfig.ftp;
 
 /***************************************************************
  * Router
@@ -269,26 +273,35 @@ exports.correctEntryFnc = function (uiInputData, done) {
 };
 
 // [POST] linux server icrRest
-exports.icrRest = function (req, isAuto, done) {
+exports.icrRest = function (req, req1,  isAuto, done) {
     return new Promise(async function (resolve, reject) {
         var filepath = req;
         var filename = (filepath.lastIndexOf("/") != -1) ? filepath.slice(filepath.lastIndexOf("/") + 1) : filepath;
         var reqInfo;
         var formData;
+        var chgFilename = filename.split('_')[0]+"/"+req1+"/"+filename;
         try {   
             if (isAuto) {
-                reqInfo = { url: propertiesConfig.icrRest.serverUrl + '/fileUploadGoogle', form: { filename: filename } };
+                reqInfo = { url: propertiesConfig.icrRest.serverUrl + '/fileUploadGoogle', form: { filename: chgFilename } };
                 //reqInfo = { url: 'http://127.0.0.1:5000/fileUpload', form: { filename: filename } };
             } else {
-                formData = {
-                    file: {
-                        value: fs.createReadStream(filepath),
-                        options: {
-                            filename: filename,
-                        }
-                    }
-                };
-                reqInfo = { url: propertiesConfig.icrRest.serverUrl + '/fileUploadGoogle', formData: formData };
+
+                // var path = sync.await(changeFtpFilePath(filename,req1, sync.defer()));
+                // if(path == null)
+                // {
+                //     sync.await(makeFtpFilePath(filename,req1, sync.defer()));
+                // }
+                // sync.await(moveFtpFile(filename,req1, sync.defer()));
+                // formData = {
+                //     file: {
+                //         value: fs.createReadStream(chgFilename),
+                //         options: {
+                //             filename: filename,
+                //         }
+                //     }
+                // };
+                // reqInfo = { url: propertiesConfig.icrRest.serverUrl + '/fileUploadGoogle', formData: formData };
+                reqInfo = { url: propertiesConfig.icrRest.serverUrl + '/fileUploadGoogle', form: { filename: chgFilename } };
                 //reqInfo = { url: 'http://127.0.0.1:5000/fileUpload', formData: formData };               
             }
             console.time("icrRest Time");
@@ -298,7 +311,7 @@ exports.icrRest = function (req, isAuto, done) {
                     return done(null, err);
                 }
                 console.timeEnd("icrRest Time");
-                if (!isAuto) fs.unlinkSync(filepath);
+                // if (!isAuto) fs.unlinkSync(filepath);
                 return done(null, body);
             });
         } catch (err) {
@@ -332,3 +345,83 @@ exports.downloadRestSaveImg = function (req, done) {
         }
     });
 };
+
+
+// FTP server file move (ScanFiles -> uploads)
+function changeFtpFilePath(fileName,fileTime, done) {
+
+    var destFtpFilePath = propertiesConfig.auto.destFtpFilePath+fileName.split('_')[0]+"/"+fileTime;
+
+    sync.fiber(function () {
+        try {
+            var c = new ftp();
+            c.on('ready', function () {
+                c.cwd(destFtpFilePath, function (err,path) {
+                    if (err) 
+                    {
+                        console.log(err);
+                        return done(null, null);
+                    }
+                    return done(null, path);
+                    });
+                });
+            c.connect(ftpConfig);
+        } catch (e) {
+            throw e;
+        }
+    });
+}
+
+
+// FTP server file move (ScanFiles -> uploads)
+function makeFtpFilePath(fileName,fileTime, done) {
+
+    var destFtpFilePath = propertiesConfig.auto.destFtpFilePath+fileName.split('_')[0]+"/"+fileTime;
+
+    sync.fiber(function () {
+        try {
+            var c = new ftp();
+            c.on('ready', function () {
+                c.mkdir(destFtpFilePath, function (err) {
+                    if (err) console.log(err);
+                    
+                    return done(null);
+                    });
+                });
+            c.connect(ftpConfig);
+        } catch (e) {
+            throw e;
+        }
+    });
+}
+
+// FTP server file move (ScanFiles -> uploads)
+function moveFtpFile(fileName,fileTime, done) {
+
+    var ftpFilePath = propertiesConfig.auto.ftpFilePath + fileName;
+    var localFilePath = propertiesConfig.auto.localFilePath + fileName;
+    var destFtpFilePath = propertiesConfig.auto.destFtpFilePath+fileName.split('_')[0]+"/"+fileTime+"/" + fileName;
+
+    sync.fiber(function () {
+        try {
+            var c = new ftp();
+            c.on('ready', function () {
+                c.get(ftpFilePath, function (err, stream) {
+                    if (err) console.log(err);
+                    stream.pipe(fs.createWriteStream(localFilePath));
+                    stream.once('close', function () {
+                        c.put(localFilePath, destFtpFilePath, function (err) {
+                            if (err) console.log(err);
+                            c.end();
+                            fs.unlinkSync(localFilePath);
+                            return done(null, null);
+                        });
+                    });
+                });
+            });
+            c.connect(ftpConfig);
+        } catch (e) {
+            throw e;
+        }
+    });
+}

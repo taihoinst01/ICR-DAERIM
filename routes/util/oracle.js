@@ -5105,7 +5105,7 @@ exports.selectFtpFileList = function (req, done) {
             conn = await oracledb.getConnection(dbConfig);
             let query = "SELECT FILENAME FROM TBL_FTP_FILE_LIST WHERE (0,FILENAME) IN ( ";
             for (var i in req) {
-                query += '(0,\'' + req[i] + '\'), ';
+                query += '(0,\'' + req[i].split("@@@")[0] + '\'), ';
             }
             query = query.slice(0, -2);
             query += ' )';
@@ -5184,14 +5184,14 @@ exports.updateFtpFileList = function (fileNm, fileSeq, cdSite, bigo, ivgtrNoSral
     });
 };
 
-exports.updateFtpFileListErrMsg = function (fileSeq, cdSite, errMsg, done) {
+exports.updateFtpFileListErrMsg = function (fileSeq, returnBigo, cdSite, errMsg, done) {
     return new Promise(async function (resolve, reject) {
         let conn;
 
         try {
             conn = await oracledb.getConnection(dbConfig);
 
-            let query = "UPDATE TBL_FTP_FILE_LIST SET ERRMSG = '"+errMsg+"' , RETURNTIME = sysdate  WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' ";
+            let query = "UPDATE TBL_FTP_FILE_LIST SET ERRMSG = '"+errMsg+"' , RETURNBIGO = '"+returnBigo+"' RETURNTIME = sysdate  WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' ";
             let result = await conn.execute(query);
             return done(null, result.rowsAffected);
         } catch (err) { // catches errors in getConnection and the query
@@ -5299,15 +5299,15 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
                 "AND API_SITE_CD = '" +cdSite+ "' ";
             }
 
-            let basicQuery = "" +
+           let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, FFL.RETURNBIGO RETURNBIGO " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
                 "(SELECT " +
                     "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
-                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL " +
+                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL, RETURNBIGO " +
                 "FROM " +
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +
@@ -5423,13 +5423,13 @@ exports.selectReportExport = function (req,  processState, pagingCount,cdSite, f
 
             let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, FFL.RETURNBIGO RETURNBIGO " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
                 "(SELECT " +
                     "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
-                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL " +
+                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL, RETURNBIGO" +
                 "FROM " +
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +
@@ -6802,6 +6802,30 @@ exports.selectNumTypo = function (req, labelDef, done) {
             }
 
             return done(null, req);
+        } catch (err) { // catches errors in getConnection and the query
+            reject(err);
+        } finally {
+            if (conn) {   // the conn assignment worked, must release
+                try {
+                    await conn.release();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+    });
+};
+
+exports.selectDocScanDate = function (req, done) {
+    return new Promise(async function (resolve, reject) {
+        let conn;
+        let result;
+        try {
+            conn = await oracledb.getConnection(dbConfig);
+            var query = "SELECT TO_CHAR(AUTOSENDTIME,'YYYYMM') SCANDATE FROM TBL_FTP_FILE_LIST WHERE FILENAME =:filePath";
+
+            result = await conn.execute(query, [req]);
+            return done(null, result.rows[0].SCANDATE);
         } catch (err) { // catches errors in getConnection and the query
             reject(err);
         } finally {

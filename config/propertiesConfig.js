@@ -8,9 +8,12 @@ var propertiesConfig = {
     uiLearning: {
 
     },
+    // icrRest: {
+    //     serverUrl: 'http://192.168.1.182:5000'
+    // },//로컬
     icrRest: {
         serverUrl: 'http://13.78.61.168:5000'
-    },
+    },//운영
     batchLearning: {
 
     },
@@ -62,6 +65,7 @@ var propertiesConfig = {
     api: {
         // invoiceApi: 'http://13.209.21.134:8080/dcostb/api/invoiceverif/insertInvoiceverif'
         invoiceApi: 'http://13.125.234.156:8080/dcostb/api/invoiceverif/insertInvoiceverif'
+        // invoiceApi: 'http://203.226.59.111:8100/dcostb/api/invoiceverif/insertInvoiceverif'  //수요일 저녁에 반영해야 함.
     }
 };
 
