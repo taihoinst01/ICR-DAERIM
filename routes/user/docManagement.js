@@ -227,24 +227,20 @@ router.post('/selectReportExport', function (req, res) {
                         var itemsCnt = 0;
                         itemsCnt = items.length;
                         var totalFlag = false;
-                        var flag = false;
+                        var silgleFlag = false;
                         for (var j in items) { 
-
-                            
-
-                            if (items[j] == 'null') {
+                            if (items[j] == 'null' && multiLabelNumArr.indexOf(j) != -1) {
                                 results.push("");
                                 failCnt ++;   
-                                // if(j==0 && !flag)
-                                // {
-                                //     failCnt ++;   
-                                //     flag = true; 
-                                // }
-                                // else
-                                // {
-                                //     failCnt ++;
-                                // }
                                 
+                            }
+                            else if (items[j] == 'null' && multiLabelNumArr.indexOf(j) == -1)
+                            {
+                                results.push("");
+                                if(k == 0)
+                                {
+                                    failCnt ++;
+                                }
                             }
                             else if (multiLabelNumArr.indexOf(j) != -1  && items[j].split('::')[1])
                             {
@@ -271,12 +267,11 @@ router.post('/selectReportExport', function (req, res) {
                                     if (isEmpty)
                                     { 
                                         results.push("");  
-                                        // failCnt --;
+                                        failCnt ++;
                                     };
             
                                 } else {
                                     results.push("");
-                                    // failCnt --;
                                 }
                             }
                             else
@@ -286,16 +281,16 @@ router.post('/selectReportExport', function (req, res) {
                                 var isEmpty = false;
                                 if(k == 0)
                                 {
-                                        textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : itemArr[0] + ((h == 0) ? '' : ' | ');
-                                        results.push(textVal);
-                                        if(textVal != "")
-                                        {
-                                            successCnt ++;
-                                        }
-                                        else
-                                        {
-                                            failCnt ++;
-                                        }
+                                    textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : itemArr[0] + ((h == 0) ? '' : ' | ');
+                                    results.push(textVal);
+                                    if(textVal != "")
+                                    {
+                                        successCnt ++;
+                                    }
+                                    else
+                                    {
+                                        failCnt ++;
+                                    }
                                 }
                                 else
                                 {
@@ -334,13 +329,13 @@ router.post('/selectReportExport', function (req, res) {
             fs.writeFile(sheetName+"_"+getTimeStamp()+".xlsx", buffer, (err) => {
                 if (err) throw err;
                 console.log("Report Create Done....");
-                res.download("D://bob", sheetName+"_"+getTimeStamp()+".xlsx", function(err) {
-                    console.log('download callback called');
-                    if( err ) {
-                        console.log('something went wrong');
-                    }
+                // res.download("D://bob", sheetName+"_"+getTimeStamp()+".xlsx", function(err) {
+                //     console.log('download callback called');
+                //     if( err ) {
+                //         console.log('something went wrong');
+                //     }
         
-                }); // pass in the path to the newly created file
+                // }); // pass in the path to the newly created file
         
             })
 
