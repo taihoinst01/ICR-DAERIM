@@ -232,6 +232,7 @@ function selectReportExport(params, isInit) {
             //     fn_alert('alert', 'ERROR');
             }
             endProgressBar(progressId);
+            fn_alert('alert', '인식률 보고서 생성 완료!');
         },
         error: function (err) {
             console.log(err);
@@ -255,6 +256,8 @@ function appendDocTableHeader(docLabelList, docDataList) {
         '<col style="width:150px;">' +
         '<col style="width:150px;">' +
         '<col style="width:150px;">' +
+        '<col style="width:150px;">' +
+        '<col style="width:150px;">' +
         '<col style="width:200px;">' +
         '<col style="width:200px;">';
     var headerTheadHTML = '<thead>';
@@ -265,6 +268,8 @@ function appendDocTableHeader(docLabelList, docDataList) {
     headerTheadHTML += '<th scope="row">시퀀스</th>';
     headerTheadHTML += '<th scope="row">송장구분</th>';
     headerTheadHTML += '<th scope="row">날짜</th>';
+    headerTheadHTML += '<th scope="row">검토요청날짜</th>';
+    headerTheadHTML += '<th scope="row">검토요청차수</th>';
     headerTheadHTML += '<th scope="row">검토비고</th>';
     headerTheadHTML += '<th scope="row">검토피드백비고</th>';
 
@@ -328,6 +333,8 @@ function appendSingleHTML(docDataList, docTopType) {
             '<td><input type="text" value="' + docDataList[i].APISEQ + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].APISEQ + '" disabled></td>' +
             '<td><input type="text" value="' + docDataList[i].KORNM + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].KORNM + '" disabled></td>' +
             '<td><input type="text" value="' + docDataList[i].AUTOSENDTIME + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].AUTOSENDTIME + '" disabled></td>' +
+            '<td><input type="text" value="' + docDataList[i].IVGTRDATE + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].IVGTRDATE + '" disabled></td>' +
+            '<td><input type="text" value="' + docDataList[i].IVGTRNOSRAL + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].IVGTRNOSRAL + '" disabled></td>' +
             '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>' +
             '<td><input type="text" value="' + returnBigo + '" class="inputst_box03_15radius" data-originalvalue="' +returnBigo + '"></td>';
         var items = docDataList[i].EXPORTDATA;
@@ -381,11 +388,15 @@ function appendMultiHTML(docLabelList, docDataList, docTopType) {
                     '<td><input type="text" value="' + docDataList[i].APISEQ + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].APISEQ + '" disabled></td>' +
                     '<td><input type="text" value="' + docDataList[i].KORNM + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].KORNM + '" disabled></td>' +
                     '<td><input type="text" value="' + docDataList[i].AUTOSENDTIME + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].AUTOSENDTIME + '" disabled></td>' +
+                    '<td><input type="text" value="' + docDataList[i].IVGTRDATE + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].IVGTRDATE + '" disabled></td>' +
+                    '<td><input type="text" value="' + docDataList[i].IVGTRNOSRAL + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].IVGTRNOSRAL + '" disabled></td>' +
                     '<td><input type="text" value="' + docDataList[i].ETC.trim() + '" class="inputst_box03_15radius" data-originalvalue="' + docDataList[i].ETC.trim() + '"></td>' + 
                     '<td><input type="text" value="' + returnBigo +'" class="inputst_box03_15radius" data-originalvalue="' + returnBigo +'"></td>';
             } else {
                 mlDataListHTML = '' +
                     '<tr class="multiTr_' + docDataList[i].SEQ + '">' +
+                    '<td></td>' +
+                    '<td></td>' +
                     '<td></td>' +
                     '<td></td>' +
                     '<td></td>' +
@@ -564,7 +575,7 @@ function appendPopTable(fileName, seq, docTopType) {
     });
 
     // 비고
-    $('#pop_returnBigo').val('').val($('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(7).find('input').eq(0).val());
+    $('#pop_returnBigo').val('').val($('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(9).find('input').eq(0).val());
 
     var docEntryMultiChk = false; // 멀티 엔트리 양식 문서인지 확인
     for(var i = 0; i< labels.length; i++) {
@@ -595,16 +606,16 @@ function appendPopTable(fileName, seq, docTopType) {
 
             // 엔트리 렌더링
             var cnt = 0;
-            for (var i = 8; i < 8 + labels.length; i++) {
+            for (var i = 10; i < 10 + labels.length; i++) {
                 var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
-                popSingleEntryRowHtml = '<input type="text" value="' + valueText + '" class="inputst_box03_15radius sigleEntryIpt entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' +  labels[i-8].SEQNUM + '" data-amount="' + labels[i-8].AMOUNT + '">';
+                popSingleEntryRowHtml = '<input type="text" value="' + valueText + '" class="inputst_box03_15radius sigleEntryIpt entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' +  labels[i-10].SEQNUM + '" data-amount="' + labels[i-10].AMOUNT + '">';
                 $('.pop_single_row_col_100').eq(cnt).find('.col_contents_02').append(popSingleEntryRowHtml);
                 cnt++;
             }
             
         } else {
             // 미분류 문서
-            for (var i = 8; i < 8 + datas[0].EXPORTDATA.split(',').length; i++) {
+            for (var i = 10; i < 10 + datas[0].EXPORTDATA.split(',').length; i++) {
                 var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
                 
                 popSingleEntryRowHtml += '<div class="pop_single_row">' +
@@ -673,14 +684,14 @@ function appendPopTable(fileName, seq, docTopType) {
 
         // single 엔트리 렌더링
         for (var i = 0; i < singleNumList.length; i++) {
-            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(Number(singleNumList[i]) + 8).find('input').eq(0).val();
+            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(Number(singleNumList[i]) + 10).find('input').eq(0).val();
             $('.sigleEntryIpt').eq(i).val(valueText).attr('data-originalvalue', valueText);
         }
 
         // multi 엔트리 렌더링
         popMultiEntryRowHtml += '<tr>';
         for (var i = 0; i < multiNumList.length; i++) {
-            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(Number(multiNumList[i]) + 8).find('input').eq(0).val();
+            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(Number(multiNumList[i]) + 10).find('input').eq(0).val();
             popMultiEntryRowHtml += '<td><input type="text" value="' + valueText + '" class="content right_border entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' + labels[multiNumList[i]].SEQNUM + '" data-amount="' + labels[multiNumList[i]].AMOUNT + '"></td>';
         }
         popMultiEntryRowHtml += '</tr>';
@@ -689,7 +700,7 @@ function appendPopTable(fileName, seq, docTopType) {
             for (var i = 0; i < $('.multiTr_' + seq).length; i++) {
                 popMultiEntryRowHtml += '<tr>'
                 for (var j = 0; j < multiNumList.length; j++) {
-                    var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(Number(multiNumList[j]) + 8).find('input').eq(0).val();    
+                    var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(Number(multiNumList[j]) + 10).find('input').eq(0).val();    
                     popMultiEntryRowHtml += '<td><input type="text" value="' + valueText + '" class="content right_border entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' + labels[multiNumList[j]].SEQNUM + '" data-amount="' + labels[multiNumList[j]].AMOUNT + '"></td>';
                 }
                 popMultiEntryRowHtml += '</tr>';
@@ -700,107 +711,6 @@ function appendPopTable(fileName, seq, docTopType) {
     }  
 }
 
-
-// 팝업 수정 전 원본
-// 이미지 파업 하단 테이블 렌더링
-function appendPopTable2(fileName, seq, docTopType) {
-    var popTableHeaderColHTML = '<colgroup>';
-    var popTableHeaderTheadHTML = '<thead><tr>';
-    var popTableContentHTML = '<tbody>';
-    if (labels.length > 0) {
-        for (var i in labels) {
-            popTableHeaderColHTML += '<col style="width:180px">';
-            popTableHeaderTheadHTML += '<th scope="row">' + labels[i].KORNM + '</th>';
-        }
-    } else {
-        for (var i in datas[0].EXPORTDATA.split(',')) {
-            popTableHeaderColHTML += '<col style="width:180px">';
-            popTableHeaderTheadHTML += '<th scope="row"></th>';
-        }
-    }
-    popTableHeaderColHTML += '</colgroup>';
-    popTableHeaderTheadHTML += '</tr></thead>';
-
-    var targetNum = 0;
-    $('.fileNameInput').each(function (i, e) {
-        if ($(e).attr('data-originalvalue') == fileName) {
-            targetNum = i;
-        }
-    });
-
-    popTableContentHTML += '<tr>';
-    if (labels.length > 0) {
-        for (var i = 8; i < 8 + labels.length; i++) {
-            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
-            
-            /*
-            if(docTopType == "58" && (i == "10" || i == "12" || i == "13" || i == "14" || i == "16" ))
-            {
-                console.log("111");
-                console.log("["+ i +"]" + valueText);
-                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';
-            }
-            else if(docTopType == "61" && (i == "11" || i == "12" || i == "13" || i == "15" ))
-            {
-                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
-            }
-            else
-            {
-                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
-            }
-            */
-            popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
-        }
-    } else {
-        for (var i = 8; i < 8 + datas[0].EXPORTDATA.split(',').length; i++) {
-            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
-            popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
-            /*
-            if(docTopType == "58" && (i == "10" || i == "12" || i == "13" || i == "14" || i == "16" ))
-            {
-                console.log("222");
-                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';
-            }
-            else if(docTopType == "61" && (i == "11" || i == "12" || i == "13" || i == "15" ))
-            {
-                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
-            }
-            else
-            {
-                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
-            }
-            */
-        }
-    }
-    popTableContentHTML += '</tr>';
-
-    if ($('.multiTr_' + seq).length > 0) {       
-        for (var i = 0; i < $('.multiTr_' + seq).length; i++) {
-            popTableContentHTML += '<tr>'
-            for (var j = 8; j < 8 + labels.length; j++) {
-                var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(j).find('input').eq(0).val();
-
-                /*
-                if(docTopType == "61" && (j == "11" || j == "12" || j == "13" || j == "15" ))
-                {
-                    popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
-                }
-                else
-                {
-                    popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';    
-                }
-                */
-                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
-            }
-            popTableContentHTML += '</tr>';
-        }
-    }
-
-    popTableContentHTML += '</tbody>';
-
-    $('#popTableHeaer').html('').append(popTableHeaderColHTML + popTableHeaderTheadHTML);
-    $('#popTableContent').html('').append(popTableHeaderColHTML + popTableContentHTML);
-}
 
 
 // 재학습 버튼 click 이벤트
@@ -1236,7 +1146,8 @@ function makeToDataForSend(convertFilePath, selectObject) {
             'ivgtrRes': $selectObject.closest('td').prev().find('input[name="listCheck"]').prev().prev().val() == "null" ? 'N':'Y',
             'ivgtrNoSral': $selectObject.closest('td').prev().find('input[name="listCheck"]').prev().prev().val() == "null" ? 0:$selectObject.closest('td').prev().find('input[name="listCheck"]').prev().prev().val(),
             'sendDate': getTimeStamp(),
-            'fileName': fileName
+            'fileName': fileName.replace(/\/uploads/, '/img')
+            //'fileName': (($(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').substring(0,$(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').lastIndexOf('/')+1)+'org_'+$(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').substring($(e).closest('tr').children().eq(1).find('input').attr('data-originalvalue').lastIndexOf('/')+1)).split('.pdf')[0] + '-0.jpg').replace(/\/uploads/, '/img')
         }
 
         var ocrDataArr = [];
@@ -1303,7 +1214,7 @@ function makeToDataForSend(convertFilePath, selectObject) {
             },
             success: function (data) {
                 console.log(data);
-                if (!data.error) {
+                if (data.success != true) {
                     fn_alert('alert', '전송 실패 했습니다.');
                 } else {
                     fn_alert('alert', '전송 성공 했습니다.');
@@ -1339,7 +1250,7 @@ function btnSendClick() {
                     'cdSite': $(e).closest('tr').children().eq(2).find('input').val().split('_')[0],
                     'editFileName': '',
                     'scanDate': $(e).closest('tr').children().eq(5).find('input').val().replace(/[^(0-9)]/gi, '').replace(/(\s*)/,''),
-                    'returnBigo': $(e).closest('tr').children().eq(7).find('input').val(),
+                    'returnBigo': $(e).closest('tr').children().eq(9).find('input').val(),
                     'ivgtrRes': $(e).prev().prev().val() == "null" ? 'N':'Y',
                     'ivgtrNoSral': $(e).prev().prev().val() == "null" ? 0:$(e).prev().prev().val(),
                     'sendDate': getTimeStamp(),
@@ -1350,9 +1261,9 @@ function btnSendClick() {
                 var ocrDataItem = {};
                 for (var j in labels) {
                     if (labels[j].AMOUNT == 'multi') { // multi entry
-                        var tempArr = [{ 'value': $(e).closest('tr').children().eq(Number(j) + 8).find('input').val() }];
+                        var tempArr = [{ 'value': $(e).closest('tr').children().eq(Number(j) + 10).find('input').val() }];
                         for (var k = 0; k < $('.multiTr_' + $(e).prev().val()).length; k++) {
-                            tempArr.push({ 'value': $('.multiTr_' + $(e).prev().val()).eq(k).children().eq(Number(j) + 8).find('input').val() });
+                            tempArr.push({ 'value': $('.multiTr_' + $(e).prev().val()).eq(k).children().eq(Number(j) + 10).find('input').val() });
                         }
                         ocrDataItem = {
                             'engKey': labels[j].ENGNM,
@@ -1366,7 +1277,7 @@ function btnSendClick() {
                             'engKey': labels[j].ENGNM,
                             'korKey': labels[j].KORNM,
                             'cnt': '1',
-                            'keyValue': [{ 'value': $(e).closest('tr').children().eq(Number(j) + 8).find('input').val() }]
+                            'keyValue': [{ 'value': $(e).closest('tr').children().eq(Number(j) + 10).find('input').val() }]
                         };
                     }
                     ocrDataArr.push(ocrDataItem);
@@ -1378,31 +1289,31 @@ function btnSendClick() {
         });
 
         // 데이터 전송하기
-        $.ajax({
-            url: '/docManagement/sendOcrData',
-            type: 'post',
-            datatype: 'json',
-            data: JSON.stringify({ 'sendData': sendJson, 'dataCnt': String(sendDocCount) }),
-            contentType: 'application/json; charset=UTF-8',
-            beforeSend: function () {
-                $('#progressMsgTitle').html("전송 중..");
-                progressId = showProgressBar();
-            },
-            success: function (data) {
-                console.log(data);
-                if (!data.error) {
-
-                } else {
-
-                }
-                endProgressBar(progressId);
-            },
-            error: function (err) {
-                console.log(err);
-                fn_alert('alert', 'ERROR');
-                endProgressBar(progressId);
-            }
-        });
+        // $.ajax({
+        //     url: '/docManagement/sendOcrData',
+        //     type: 'post',
+        //     datatype: 'json',
+        //     data: JSON.stringify({ 'sendData': sendJson, 'dataCnt': String(sendDocCount) }),
+        //     contentType: 'application/json; charset=UTF-8',
+        //     beforeSend: function () {
+        //         $('#progressMsgTitle').html("전송 중..");
+        //         progressId = showProgressBar();
+        //     },
+        //     success: function (data) {
+        //         console.log(data);
+        //         if (data.success != true) {
+        //             fn_alert('alert', '전송 실패 했습니다.');
+        //         } else {
+        //             fn_alert('alert', '전송 성공 했습니다.');
+        //         }
+        //         endProgressBar(progressId);
+        //     },
+        //     error: function (err) {
+        //         console.log(err);
+        //         fn_alert('alert', 'ERROR');
+        //         endProgressBar(progressId);
+        //     }
+        // });
     });
 }
 
@@ -1527,4 +1438,108 @@ function clickPopCloseBtn () {
             saveFlag = false;
         }
     })
+}
+
+
+
+
+// 팝업 수정 전 원본
+// 이미지 파업 하단 테이블 렌더링
+function appendPopTable2(fileName, seq, docTopType) {
+    var popTableHeaderColHTML = '<colgroup>';
+    var popTableHeaderTheadHTML = '<thead><tr>';
+    var popTableContentHTML = '<tbody>';
+    if (labels.length > 0) {
+        for (var i in labels) {
+            popTableHeaderColHTML += '<col style="width:180px">';
+            popTableHeaderTheadHTML += '<th scope="row">' + labels[i].KORNM + '</th>';
+        }
+    } else {
+        for (var i in datas[0].EXPORTDATA.split(',')) {
+            popTableHeaderColHTML += '<col style="width:180px">';
+            popTableHeaderTheadHTML += '<th scope="row"></th>';
+        }
+    }
+    popTableHeaderColHTML += '</colgroup>';
+    popTableHeaderTheadHTML += '</tr></thead>';
+
+    var targetNum = 0;
+    $('.fileNameInput').each(function (i, e) {
+        if ($(e).attr('data-originalvalue') == fileName) {
+            targetNum = i;
+        }
+    });
+
+    popTableContentHTML += '<tr>';
+    if (labels.length > 0) {
+        for (var i = 9; i < 9 + labels.length; i++) {
+            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
+            
+            /*
+            if(docTopType == "58" && (i == "10" || i == "12" || i == "13" || i == "14" || i == "16" ))
+            {
+                console.log("111");
+                console.log("["+ i +"]" + valueText);
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';
+            }
+            else if(docTopType == "61" && (i == "11" || i == "12" || i == "13" || i == "15" ))
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+            }
+            else
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+            }
+            */
+            popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+        }
+    } else {
+        for (var i = 9; i < 9 + datas[0].EXPORTDATA.split(',').length; i++) {
+            var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(i).find('input').eq(0).val();
+            popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+            /*
+            if(docTopType == "58" && (i == "10" || i == "12" || i == "13" || i == "14" || i == "16" ))
+            {
+                console.log("222");
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';
+            }
+            else if(docTopType == "61" && (i == "11" || i == "12" || i == "13" || i == "15" ))
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+            }
+            else
+            {
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+            }
+            */
+        }
+    }
+    popTableContentHTML += '</tr>';
+
+    if ($('.multiTr_' + seq).length > 0) {       
+        for (var i = 0; i < $('.multiTr_' + seq).length; i++) {
+            popTableContentHTML += '<tr>'
+            for (var j = 8; j < 8 + labels.length; j++) {
+                var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(j).find('input').eq(0).val();
+
+                /*
+                if(docTopType == "61" && (j == "11" || j == "12" || j == "13" || j == "15" ))
+                {
+                    popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '" readonly="readonly"></td>';  
+                }
+                else
+                {
+                    popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';    
+                }
+                */
+                popTableContentHTML += '<td><input type="text" value="' + valueText + '" class="inputst_box03_15radius" data-originalvalue="' + valueText + '"></td>';
+            }
+            popTableContentHTML += '</tr>';
+        }
+    }
+
+    popTableContentHTML += '</tbody>';
+
+    $('#popTableHeaer').html('').append(popTableHeaderColHTML + popTableHeaderTheadHTML);
+    $('#popTableContent').html('').append(popTableHeaderColHTML + popTableContentHTML);
 }

@@ -227,14 +227,24 @@ router.post('/selectReportExport', function (req, res) {
                         var itemsCnt = 0;
                         itemsCnt = items.length;
                         var totalFlag = false;
-
+                        var flag = false;
                         for (var j in items) { 
 
                             
 
                             if (items[j] == 'null') {
                                 results.push("");
-                                failCnt ++;
+                                failCnt ++;   
+                                // if(j==0 && !flag)
+                                // {
+                                //     failCnt ++;   
+                                //     flag = true; 
+                                // }
+                                // else
+                                // {
+                                //     failCnt ++;
+                                // }
+                                
                             }
                             else if (multiLabelNumArr.indexOf(j) != -1  && items[j].split('::')[1])
                             {
@@ -251,6 +261,7 @@ router.post('/selectReportExport', function (req, res) {
                                             }
                                             else
                                             {
+                                                
                                                 failCnt ++;
                                             }
                                             isEmpty = false;
@@ -260,10 +271,12 @@ router.post('/selectReportExport', function (req, res) {
                                     if (isEmpty)
                                     { 
                                         results.push("");  
+                                        // failCnt --;
                                     };
             
                                 } else {
                                     results.push("");
+                                    // failCnt --;
                                 }
                             }
                             else
@@ -287,45 +300,10 @@ router.post('/selectReportExport', function (req, res) {
                                 else
                                 {
                                     results.push("");
+                                    
                                 }
                             }
-                            // else
-                            // {
-                            //     var textVal = '';
-                            //     var itemArr = items[j].split(' | ');
-                            //     var isEmpty = false;
-                            //     if(k == 0)
-                            //     {
-                            //         for (var h in itemArr) {
-                            //             textVal = (itemArr[h].split('::')[1]) ? itemArr[h].split('::')[1] : itemArr[h] + ((h == 0) ? '' : ' | ');
-                            //             results.push(textVal);
-                            //             // if(textVal != "")
-                            //             //     {
-                            //             //         successCnt ++;
-                            //             //     }
-                            //             //     else
-                            //             //     {
-                            //             //         failCnt ++;
-                            //             //     }
-                            //         }
-                            //     }
-                            //     else
-                            //     {
-                            //         results.push("");
-                            //         for (var h in itemArr) {
-                            //             textVal = (itemArr[h].split('::')[1]) ? itemArr[h].split('::')[1] : itemArr[h] + ((h == 0) ? '' : ' | ');
-                            //             results.push(textVal);
-                            //             // if(textVal != "")
-                            //             // {
-                            //             //     successCnt ++;
-                            //             // }
-                            //             // else
-                            //             // {
-                            //             //     failCnt ++;
-                            //             // }
-                            //         }
-                            //     }
-                            // }
+                            
                             if(k == (multiEntryInfo.dataCount-1))
                             {
                                 totalFlag = true;
@@ -356,12 +334,21 @@ router.post('/selectReportExport', function (req, res) {
             fs.writeFile(sheetName+"_"+getTimeStamp()+".xlsx", buffer, (err) => {
                 if (err) throw err;
                 console.log("Report Create Done....");
+                res.download("D://bob", sheetName+"_"+getTimeStamp()+".xlsx", function(err) {
+                    console.log('download callback called');
+                    if( err ) {
+                        console.log('something went wrong');
+                    }
+        
+                }); // pass in the path to the newly created file
+        
             })
 
         } catch (e) {
             console.log(e);
             returnJson = { 'error': e };
         } finally {
+            returnJson = { 'error': "SUCCESS" }
             res.send(returnJson);
         }
     });
@@ -380,6 +367,7 @@ router.post('/sendOcrData', function (req, res) {
                 dataCnt: req.body.dataCnt
             };
             console.log(reqParams)
+            // console.log(JSON.stringify(reqParams))
             do {
                 var apiResponse = request('POST', propertiesConfig.api.invoiceApi, { json: reqParams });
                 var apiRes = JSON.parse(apiResponse.getBody('utf8'));
@@ -391,8 +379,9 @@ router.post('/sendOcrData', function (req, res) {
                     for (var i = 0; i < apiRes.error.sequence.length; i++) {
                         var seq = apiRes.error.sequence[i].seq;
                         var errMsg = apiRes.error.sequence[i].errMsg;
+                        var returnBigo = reqParams.data[0].returnBigo;
 
-                        sync.await(oracle.updateFtpFileListErrMsg(seq, cdSite, errMsg, sync.defer()));
+                        sync.await(oracle.updateFtpFileListErrMsg(seq, cdSite, errMsg, returnBigo,sync.defer()));
                     }
                 }
                 else
@@ -400,7 +389,8 @@ router.post('/sendOcrData', function (req, res) {
                     var cdSite = apiRes.cdSite;
                     for (var i = 0; i < reqParams.data.length; i++) {
                         var seq = reqParams.data[i].sequence;
-                        sync.await(oracle.updateFtpFileListErrMsg(seq, cdSite, '', sync.defer()));
+                        var returnBigo = reqParams.data[0].returnBigo;
+                        sync.await(oracle.updateFtpFileListErrMsg(seq, cdSite, '', returnBigo,sync.defer()));
                     }
                 }
 

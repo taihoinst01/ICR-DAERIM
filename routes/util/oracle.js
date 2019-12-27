@@ -4110,7 +4110,7 @@ exports.insertFtpFileListFromUi = function (req, done) {
 
             req.push(apiSeq);
             req.push(apiSiteCD);
-            await conn.execute("INSERT INTO TBL_FTP_FILE_LIST(SEQ, FILEPATH, FILENAME, API_SEQ, API_SITE_CD) VALUES (SEQ_FTP_FILE_LIST.NEXTVAL, :filePath, :fileName, :apiSeq, :apiSiteCd)", req);
+            await conn.execute("INSERT INTO TBL_FTP_FILE_LIST(SEQ, FILEPATH, FILENAME, API_SEQ, API_SITE_CD,FEEDBACKFLAG ) VALUES (SEQ_FTP_FILE_LIST.NEXTVAL, :filePath, :fileName, :apiSeq, :apiSiteCd ,'N')", req);
 
             return done(null, null);
         } catch (err) { // catches errors in getConnection and the query
@@ -5162,7 +5162,7 @@ exports.updateFtpFileList = function (fileNm, fileSeq, cdSite, bigo, ivgtrNoSral
 
             // let query = "INSERT INTO TBL_FTP_FILE_LIST VALUES (SEQ_FTP_FILE_LIST.NEXTVAL, :filePath, :fileName, 'N')";
             //let query = "UPDATE TBL_FTP_FILE_LIST SET RETURNFLAG = 'Y', RETURNTIME = sysdate, ETC = '"+bigo+"' WHERE SEQ = '"+fileSeq+"' AND FILENAME = '"+fileNm+"' ";
-            let query = "UPDATE TBL_FTP_FILE_LIST SET RETURNFLAG = 'Y', RETURNTIME = sysdate, ETC = '"+bigo+"', IVGTRNOSRAL = '"+ivgtrNoSral+"', IVGTRDATE = '"+ivgtrDate+"', "
+            let query = "UPDATE TBL_FTP_FILE_LIST SET RETURNFLAG = 'Y', FEEDBACKFLAG = 'N', RETURNTIME = sysdate, ETC = '"+bigo+"', IVGTRNOSRAL = '"+ivgtrNoSral+"', IVGTRDATE = '"+ivgtrDate+"', "
             + "IVGTRNAME = '"+ivgtrName+"' WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' AND FILENAME = '"+fileNm+"' ";
             // for (var i in req) 
             let result = await conn.execute(query);
@@ -5184,14 +5184,18 @@ exports.updateFtpFileList = function (fileNm, fileSeq, cdSite, bigo, ivgtrNoSral
     });
 };
 
-exports.updateFtpFileListErrMsg = function (fileSeq, returnBigo, cdSite, errMsg, done) {
+exports.updateFtpFileListErrMsg = function (fileSeq,  cdSite, errMsg, returnBigo, done) {
     return new Promise(async function (resolve, reject) {
         let conn;
-
+        var feedBackFlag = "N";
         try {
             conn = await oracledb.getConnection(dbConfig);
-
-            let query = "UPDATE TBL_FTP_FILE_LIST SET ERRMSG = '"+errMsg+"' , RETURNBIGO = '"+returnBigo+"' RETURNTIME = sysdate  WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' ";
+            if(errMsg =="")
+            {
+                feedBackFlag = "Y";
+            }
+            
+            let query = "UPDATE TBL_FTP_FILE_LIST SET ERRMSG = '"+errMsg+"' , RETURNBIGO = '"+returnBigo+"', FEEDBACKFLAG = '"+feedBackFlag+"',  RETURNTIME = sysdate  WHERE API_SEQ = '"+fileSeq+"' AND API_SITE_CD = '"+cdSite+"' ";
             let result = await conn.execute(query);
             return done(null, result.rowsAffected);
         } catch (err) { // catches errors in getConnection and the query
@@ -5255,15 +5259,30 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
             let fileNameQuery = "";
             let sequenceQuery = "";
 
-            if(processState == "N")
+            if(processState == "ALL")
             {
-                processStateQuery = "" ;
+                processStateQuery = "" +
+                " ORDER BY FFL.SEQ DESC " ;
+            }
+            else if(processState == "N")
+            {
+                
+                processStateQuery = ""+
+                " AND RETURNFLAG = 'Y' " +
+                " AND to_date(FFL.IVGTRDATE, 'YYMMDDHH24MISS') >= TO_DATE('"+req[1]+"', 'YYMMDDHH24MISS')  "+
+                " AND to_date(FFL.IVGTRDATE, 'YYMMDDHH24MISS') <= TO_DATE('"+req[2]+"', 'YYMMDDHH24MISS') "+
+                " AND FFL.FEEDBACKFLAG = 'N' "+
+                " ORDER BY FFL.IVGTRDATE DESC " ;
             }
             else
             {
                 
                 processStateQuery = ""+
-                "AND RETURNFLAG = 'Y' " ;
+                " AND RETURNFLAG = 'Y' " +
+                " AND to_date(FFL.IVGTRDATE, 'YYMMDDHH24MISS') >= TO_DATE('"+req[1]+"', 'YYMMDDHH24MISS')  "+
+                " AND to_date(FFL.IVGTRDATE, 'YYMMDDHH24MISS') <= TO_DATE('"+req[2]+"', 'YYMMDDHH24MISS') "+
+                " AND FFL.FEEDBACKFLAG = 'Y' "+
+                " ORDER BY FFL.IVGTRDATE DESC " ;
             }
 
             if(fileName == null)
@@ -5301,13 +5320,13 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
 
            let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, FFL.RETURNBIGO RETURNBIGO " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, NVL(TO_CHAR(TO_DATE(FFL.IVGTRDATE,'YYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS'),' ') AS IVGTRDATE, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, NVL(FFL.RETURNBIGO,'') RETURNBIGO , FFL.FEEDBACKFLAG " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
                 "(SELECT " +
-                    "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
+                    "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, IVGTRDATE, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
-                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL, RETURNBIGO " +
+                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, NVL(IVGTRNOSRAL,0) IVGTRNOSRAL, REPLACE(NVL(RETURNBIGO, ' ' ),'null',' ')RETURNBIGO , FEEDBACKFLAG " +
                 "FROM " +
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +
@@ -5316,11 +5335,12 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
                 "AND CAST(FFL.AUTOSENDTIME as Date) >= TO_DATE(:startDate, 'YYMMDDHH24MISS') " +
                 "AND CAST(FFL.AUTOSENDTIME as Date) <= TO_DATE(:endDate, 'YYMMDDHH24MISS') " +
                 siteCdQuery +
-                processStateQuery +
+                
                 fileNameQuery +
                 sequenceQuery +
+                processStateQuery ;//+
                 // "AND RETURNFLAG = :retrinFlag " +
-                "ORDER BY FFL.SEQ DESC";
+                // "ORDER BY FFL.SEQ DESC";
 
             
             
@@ -5429,7 +5449,7 @@ exports.selectReportExport = function (req,  processState, pagingCount,cdSite, f
                 "(SELECT " +
                     "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
-                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL, RETURNBIGO" +
+                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL, RETURNBIGO " +
                 "FROM " +
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +

@@ -81,8 +81,9 @@
                         <input type="text" class="datepicker inpType" name="searchEndDate" id="searchEndDate" readonly />
                         <!--<a href="#none" class="btncalendar dateclick">달력</a>-->
                         <select id="processStateSelect">
-                            <option value="N">전체</option>
-                            <option value="Y">검토</option>
+                            <option value="ALL">전체</option>
+							<option value="N">검토요청</option>
+							<option value="Y">전송완료</option>
 						</select>
 						<input type="text" style="width: 20%; height: 40px; border: 1px solid #EA7169; border-radius: 10px; color: #EA7169;" name="searchFileNm" id="searchFileNm" placeholder="파일명"/>
 						<input type="text" style="width: 10%; height: 40px; border: 1px solid #EA7169; border-radius: 10px; color: #EA7169;" name="searchSequence" id="searchSequence" placeholder="시퀀스"/>
@@ -412,7 +413,7 @@
                 <div class="btn_rt">                   
                     <button type="button" id="btn_retrain" class="btn_w100_h35">재학습</button>
 					<button type="button" id="btn_send" class="btn_w100_h35">전송</button>
-					<!-- <button type="button" id="btn_report" class="btn_w100_h35">인식률</button> -->
+					<button type="button" id="btn_report" class="btn_w100_h35">인식률</button>
                 </div>
 				
 			</div>
@@ -500,3 +501,20 @@
 	</div>
 </div>
 <!-- //팝업_양식이미지 -->
+
+
+<!-- 양식이미지 업로드폼-->
+<!-- <div id="uploadForm" class="box_content_L">
+
+	<div class="st_infortext_01">
+		<form id="uploadFileForm" action="" method="post" enctype="multipart/form-data">
+			<p class="attach_btn">
+				<input type="file" id="uploadFile" name="file" value="upload" />
+				<div id="uploadFileBtn"></div>
+			</p>
+		</form>
+		<div id="uploadInfoText" class="ui_uploadText">Drag and drop or click here.</div>
+	</div>
+
+</div> -->
+<!-- 양식이미지 업로드폼-->

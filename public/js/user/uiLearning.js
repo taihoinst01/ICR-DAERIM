@@ -2532,7 +2532,7 @@ function processFromDocManage() {
         var fileInfo = {
             'filePath': filepath
         };
-        processImage(fileInfo, false);
+        processImage(fileInfo,true);
         progressId = showProgressBar();
     }
 }
