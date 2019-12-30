@@ -114,6 +114,7 @@ router.post('/selectReportExport', function (req, res) {
             var results = [];
             
             header.push("NO");
+            header.push("스캔시간");
             header.push("파일명");
             header.push("현장코드");
 
@@ -130,17 +131,17 @@ router.post('/selectReportExport', function (req, res) {
 
             if(docTopType == "58")
             {
-                options = {'!cols': [{ wch: 6 }, { wch: 40 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 50 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 25 }
+                options = {'!cols': [{ wch: 6 }, { wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 50 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 25 }
                     , { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 } ]};
                 
             }
             else if (docTopType == "51")
             {
-                options = {'!cols': [{ wch: 6 }, { wch: 40 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 25 }]};
+                options = {'!cols': [{ wch: 6 },{ wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 25 }]};
             }
             else if(docTopType == "61")
             {
-                options = {'!cols': [{ wch: 6 }, { wch: 40 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+                options = {'!cols': [{ wch: 6 },{ wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
                     , { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 15 }]};
             }
 
@@ -154,6 +155,7 @@ router.post('/selectReportExport', function (req, res) {
                     var results = [];
                     var items = result[1][m].EXPORTDATA;
                     results.push(m+1);
+                    results.push(result[1][m].AUTOSENDTIME);
                     results.push(result[1][m].FILENAME.substring(result[1][m].FILENAME.lastIndexOf('/') + 1));
                     results.push(result[1][m].APISITECD);
                     items = items.replace(/\"/gi, '').slice(1, -1);
@@ -168,7 +170,60 @@ router.post('/selectReportExport', function (req, res) {
                         } else {
                             var textVal = (items[j].split('::')[1]) ? items[j].split('::')[1] : items[j];
                             results.push(textVal);
-                            successCnt ++;
+                            if(j == 0 || j == 1 || j == 2 ||  j == 7 || j == 11 || j == 13 )
+                            {
+                                if(stringCheck(textVal,"")){
+                                    successCnt ++;
+                                }else{
+                                    failCnt ++;
+                                }
+                            }
+                            else if(j == 4){
+                                if(remiconTimeCheck(textVal)){
+                                    successCnt ++;
+                                }else{
+                                    failCnt ++;
+                                }
+                            }
+                            else if(j == 5){
+                                if(numberCheck(textVal, 1)){
+                                    successCnt ++;
+                                }else{
+                                    failCnt ++;
+                                }
+                            }
+                            else if(j == 6){
+                                if(numberCheck(textVal, "")){
+                                    successCnt ++;
+                                }else{
+                                    failCnt ++;
+                                }
+                            }
+                            else if(j == 8 || j == 9){
+                                if(numberCheck(textVal, 2)){
+                                    successCnt ++;
+                                }else{
+                                    failCnt ++;
+                                }
+                            }
+                            else if(j == 10){
+                                if(numberCheck(textVal, 3)){
+                                    successCnt ++;
+                                }else{
+                                    failCnt ++;
+                                }
+                            }
+                            else if(j == 14){
+                                if(dateCheck(textVal, docTopType)){
+                                    successCnt ++;
+                                }else{
+                                    failCnt ++;
+                                }
+                            }
+                            else{
+                                successCnt ++;
+                            }
+                            // successCnt ++;
                         }
                     }
                     results.push(successCnt);
@@ -180,11 +235,11 @@ router.post('/selectReportExport', function (req, res) {
                     totalAverage = Number(totalAverage) + Number(average) ;
                     data.push(results);
                 }
-                console.log( (totalAverage / result[1].length).toFixed(2)   );
-                console.log( ((totalSuccess / (totalSuccess + totalfail)) * 100).toFixed(2) );
+                // console.log( (totalAverage / result[1].length).toFixed(2)   );
+                // console.log( ((totalSuccess / (totalSuccess + totalfail)) * 100).toFixed(2) );
                 // data.push(((totalSuccess / (totalSuccess + totalfail)) * 100).toFixed(2));
             }
-            else 
+            else if(docTopType == "51") //일반송장
             {
                 var multiLabelNumArr = [];
                 
@@ -211,11 +266,13 @@ router.post('/selectReportExport', function (req, res) {
                         var results = [];
                         if (k == 0) {
                             results.push(docDataList[m].RNUM);
+                            results.push(docDataList[m].AUTOSENDTIME);
                             results.push(docDataList[m].FILENAME.substring(docDataList[m].FILENAME.lastIndexOf('/') + 1));
                             results.push(docDataList[m].APISITECD);
                         }
                         else
                         {
+                            results.push("");
                             results.push("");
                             results.push("");
                             results.push("");
@@ -253,7 +310,22 @@ router.post('/selectReportExport', function (req, res) {
                                             results.push(textVal);
                                             if(textVal != "")
                                             {
-                                                successCnt ++;
+                                                if(j == 3){
+                                                    if(numberCheck(textVal,"")){
+                                                        successCnt ++;
+                                                    }else{
+                                                        failCnt ++;
+                                                    }
+                                                }
+                                                else if(j == 7){
+                                                    if(dateCheck(textVal, docTopType)){
+                                                        successCnt ++;
+                                                    }else{
+                                                        failCnt ++;
+                                                    }
+                                                }else{
+                                                    successCnt ++;
+                                                }
                                             }
                                             else
                                             {
@@ -285,7 +357,21 @@ router.post('/selectReportExport', function (req, res) {
                                     results.push(textVal);
                                     if(textVal != "")
                                     {
-                                        successCnt ++;
+                                        if(j == 3){
+                                            if(numberCheck(textVal,"")){
+                                                successCnt ++;
+                                            }else{
+                                                failCnt ++;
+                                            }
+                                        }else if(j == 7){
+                                            if(dateCheck(textVal, docTopType)){
+                                                successCnt ++;
+                                            }else{
+                                                failCnt ++;
+                                            }
+                                        }else{
+                                            successCnt ++;
+                                        }
                                     }
                                     else
                                     {
@@ -306,8 +392,8 @@ router.post('/selectReportExport', function (req, res) {
                         }
                         if(totalFlag)
                         {
-                            console.log("success : " + successCnt);
-                            console.log("fail : " + failCnt);
+                            // console.log("success : " + successCnt);
+                            // console.log("fail : " + failCnt);
                             results.push(successCnt);
                             results.push(failCnt);
                             average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
@@ -315,12 +401,217 @@ router.post('/selectReportExport', function (req, res) {
                         }
                         
                         data.push(results);
-                    //results.push(successCnt);
-                    // totalSuccess = Number(totalSuccess) + Number(successCnt);
-                    // results.push(failCnt);
-                    // totalfail = Number(totalfail) + Number(failCnt);
-                    // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
-                    // results.push(average);
+                    }
+                }
+            }
+            else if(docTopType == "61") //철근송장
+            {
+                var multiLabelNumArr = [];
+                
+                var docDataList = result[1];
+                // Multi Label 순서 구하기
+                for (var i in docLabelList) {
+                    if (docLabelList[i].AMOUNT == "multi") multiLabelNumArr.push(i);
+                }
+                
+                for (var m in docDataList) {
+                    var multiLabelYLocArr = [];
+                    var multiEntryInfo = getMultiLabelYLoc1(docDataList[m].EXPORTDATA, multiLabelNumArr);
+                    multiLabelYLocArr = multiEntryInfo.dataArr;
+
+                    var totalAverage = 0;
+                    var totalSuccess = 0;
+                    var totalfail = 0;
+                    var successCnt = 0;
+                    var failCnt = 0;
+                    var average = 0;
+
+
+                    for (var k =0; k < multiEntryInfo.dataCount; k++) {
+                        var results = [];
+                        if (k == 0) {
+                            results.push(docDataList[m].RNUM);
+                            results.push(docDataList[m].AUTOSENDTIME);
+                            results.push(docDataList[m].FILENAME.substring(docDataList[m].FILENAME.lastIndexOf('/') + 1));
+                            results.push(docDataList[m].APISITECD);
+                        }
+                        else
+                        {
+                            results.push("");
+                            results.push("");
+                            results.push("");
+                            results.push("");
+                        }
+
+                        var items = docDataList[m].EXPORTDATA;
+                        items = items.replace(/\"/gi, '').slice(1, -1);
+                        items = items.split(',');
+                        var itemsCnt = 0;
+                        itemsCnt = items.length;
+                        var totalFlag = false;
+                        var silgleFlag = false;
+                        for (var j in items) { 
+                            if (items[j] == 'null' && multiLabelNumArr.indexOf(j) != -1) {
+                                results.push("");
+                                failCnt ++;   
+                                
+                            }
+                            else if (items[j] == 'null' && multiLabelNumArr.indexOf(j) == -1)
+                            {
+                                results.push("");
+                                if(k == 0)
+                                {
+                                    failCnt ++;
+                                }
+                            }
+                            else if (multiLabelNumArr.indexOf(j) != -1  && items[j].split('::')[1])
+                            {
+                                var yLoc = Number(multiLabelYLocArr[k].yLoc);
+                                if (items[j].split(' | ').length > 0) {
+                                    var isEmpty = true;
+                                    for (var l in items[j].split(' | ')) {
+                                        if (Math.abs(Number(items[j].split(' | ')[l].split('::')[0]) - yLoc) < 20) {
+                                            var textVal = items[j].split(' | ')[l].split('::')[1];                                
+                                            results.push(textVal);
+                                            if(textVal != "")
+                                            {
+                                                if(j == 4){
+                                                    if(numberHyphenCheck(textVal)){
+                                                        successCnt ++;
+                                                    }else{
+                                                        failCnt ++;
+                                                    }
+                                                }
+                                                else if(j == 6 || j == 8 || j == 9 || j == 11){
+                                                    if(numberCheck(textVal,"")){
+                                                        successCnt ++;
+                                                    }else{
+                                                        failCnt ++;
+                                                    }
+                                                }
+                                                else if(j == 10 ){
+                                                    if(stringCheck(textVal,"HD")){
+                                                        successCnt ++;
+                                                    }else{
+                                                        failCnt ++;
+                                                    }
+                                                }
+                                                else if(j == 7 ){
+                                                    if(numberCheck(textVal,1)){
+                                                        successCnt ++;
+                                                    }else{
+                                                        failCnt ++;
+                                                    }
+                                                }
+                                                else if(j == 2 ){
+                                                    if(dateCheck(textVal,docTopType)){
+                                                        successCnt ++;
+                                                    }else{
+                                                        failCnt ++;
+                                                    }
+                                                }
+                                                else{
+                                                    successCnt ++;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                
+                                                failCnt ++;
+                                            }
+                                            isEmpty = false;
+                                            break;
+                                        }
+                                    }
+                                    if (isEmpty)
+                                    { 
+                                        results.push("");  
+                                        failCnt ++;
+                                    };
+            
+                                } else {
+                                    results.push("");
+                                }
+                            }
+                            else
+                            {
+                                var textVal = '';
+                                var itemArr = items[j].split(' | ');
+                                var isEmpty = false;
+                                if(k == 0)
+                                {
+                                    textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : itemArr[0] + ((h == 0) ? '' : ' | ');
+                                    results.push(textVal);
+                                    if(textVal != "")
+                                    {
+                                        if(j == 4){
+                                            if(numberHyphenCheck(textVal)){
+                                                successCnt ++;
+                                            }else{
+                                                failCnt ++;
+                                            }
+                                        }
+                                        else if(j == 6 || j == 8 || j == 9 || j == 11){
+                                            if(numberCheck(textVal,"")){
+                                                successCnt ++;
+                                            }else{
+                                                failCnt ++;
+                                            }
+                                        }
+                                        else if(j == 10 ){
+                                            if(stringCheck(textVal,"HD")){
+                                                successCnt ++;
+                                            }else{
+                                                failCnt ++;
+                                            }
+                                        }
+                                        else if(j == 7 ){
+                                            if(numberCheck(textVal,1)){
+                                                successCnt ++;
+                                            }else{
+                                                failCnt ++;
+                                            }
+                                        }
+                                        else if(j == 2 ){
+                                            if(dateCheck(textVal,docTopType)){
+                                                successCnt ++;
+                                            }else{
+                                                failCnt ++;
+                                            }
+                                        }
+                                        else{
+                                            successCnt ++;
+                                        }
+                                        
+                                    }
+                                    else
+                                    {
+                                        failCnt ++;
+                                    }
+                                }
+                                else
+                                {
+                                    results.push("");
+                                    
+                                }
+                            }
+                            
+                            if(k == (multiEntryInfo.dataCount-1))
+                            {
+                                totalFlag = true;
+                            }
+                        }
+                        if(totalFlag)
+                        {
+                            // console.log("success : " + successCnt);
+                            // console.log("fail : " + failCnt);
+                            results.push(successCnt);
+                            results.push(failCnt);
+                            average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
+                            results.push(average);
+                        }
+                        
+                        data.push(results);
                     }
                 }
             }
@@ -524,5 +815,126 @@ function getTimeStamp() {
     }
     return zero + n;
 }
+
+
+/*
+
+1.숫자 이면서 숫자 자리숫 체크
+-> 숫자, 자리수 변수
+
+2.시간타입 체크
+XX시XX분
+
+
+3. 날짜타입 체크
+
+XXXX년XX월XX일 -> 레미콘
+
+2019-12-20(금) -> 일반
+
+2019-12-26 -> 철근
+
+4. 문자여부 체크 O
+
+5. 문자여부 및 HD 포한여부 체크 O
+
+
+6. 숫자여부 체크
+
+*/
+
+function stringCheck(str, chkStr) {
+    var result = false; 
+    if(chkStr != ""){
+        if(isNaN(str)){
+            if(str != undefined){
+                if(str.indexOf(chkStr) !== -1){ result = true; }
+            }
+            
+        }
+    }else{
+        if(isNaN(str)){    result = true;    }
+    }
+    return result;
+}
+
+function numberCheck(num, length) {
+    var result = false;
+    if(length != ""){
+        if(!isNaN(num)){
+            if(num.indexOf(".00") || num.indexOf(".000") )
+            {
+                num = num.replace(".000","").replace(".00","");
+            }
+            if(num.length == length){ result = true; }
+        }
+    }else{
+        if(!isNaN(num)){ result = true; }
+    }
+    return result;
+}
+
+function numberHyphenCheck(num) {
+    var result = false;
+    if(num.indexOf("-")){
+        num = num.replace("-","");
+        if(!isNaN(num)){
+            result = true;
+        }
+    }else{
+        if(!isNaN(num)){
+            result = true;
+        }
+    }
+    return result;
+}
+
+function remiconTimeCheck(time) {
+    var result = false;
+    var pattern = /[0-9]{2}시[0-9]{2}분/; 
+    if(pattern.test(time))
+    {
+        result = true;
+    }
+    
+    return result;
+}
+
+
+function dateCheck(date, docType) {
+    var result = false;
+    var remiconPattern = /^[0-9]{4}년[0-9]{2}월[0-9]{2}일/g; 
+    var generalPattern1 = /^[0-9]{4}년[0-9]{2}월[0-9]{2}일/g; 
+    var generalPattern2 = /^[0-9]{4}-[0-9]{2}-[0-9]{2}/g; 
+    var rebarPattern = /^[0-9]{4}-[0-9]{2}-[0-9]{2}/g; 
+    
+    if(docType == "58")
+    {
+        if(remiconPattern.test(date))
+        {
+            result = true;
+        }
+    }
+    else if(docType == "61")
+    {
+        if(rebarPattern.test(date))
+        {
+            result = true;
+        }
+    }
+    else if(docType == "51")
+    {
+        if(generalPattern1.test(date) || generalPattern2.test(date))
+        {
+            result = true;
+        }
+    }
+    // console.log(date +"||"+ result);
+    return result;
+}
+
+
+
+
 
 module.exports = router;

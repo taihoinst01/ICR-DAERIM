@@ -5397,15 +5397,30 @@ exports.selectReportExport = function (req,  processState, pagingCount,cdSite, f
             let fileNameQuery = "";
             let sequenceQuery = "";
 
-            if(processState == "N")
+            if(processState == "ALL")
             {
-                processStateQuery = "" ;
+                processStateQuery = "" +
+                " ORDER BY FFL.SEQ DESC " ;
+            }
+            else if(processState == "N")
+            {
+                
+                processStateQuery = ""+
+                " AND RETURNFLAG = 'Y' " +
+                " AND to_date(FFL.IVGTRDATE, 'YYMMDDHH24MISS') >= TO_DATE('"+req[1]+"', 'YYMMDDHH24MISS')  "+
+                " AND to_date(FFL.IVGTRDATE, 'YYMMDDHH24MISS') <= TO_DATE('"+req[2]+"', 'YYMMDDHH24MISS') "+
+                " AND FFL.FEEDBACKFLAG = 'N' "+
+                " ORDER BY FFL.IVGTRDATE DESC " ;
             }
             else
             {
                 
                 processStateQuery = ""+
-                "AND FFL.RETURNFLAG = 'Y' " ;
+                " AND RETURNFLAG = 'Y' " +
+                " AND to_date(FFL.IVGTRDATE, 'YYMMDDHH24MISS') >= TO_DATE('"+req[1]+"', 'YYMMDDHH24MISS')  "+
+                " AND to_date(FFL.IVGTRDATE, 'YYMMDDHH24MISS') <= TO_DATE('"+req[2]+"', 'YYMMDDHH24MISS') "+
+                " AND FFL.FEEDBACKFLAG = 'Y' "+
+                " ORDER BY FFL.IVGTRDATE DESC " ;
             }
 
             if(fileName == null)
@@ -5418,18 +5433,7 @@ exports.selectReportExport = function (req,  processState, pagingCount,cdSite, f
                 fileNameQuery = ""+
                 "AND PME.FILENAME LIKE '%" + fileName + "%' ";
             }
-
-            if(cdSite == null)
-            {
-                siteCdQuery = ""+
-                "AND FFL.API_SITE_CD is not null " ;
-            }
-            else
-            {
-                siteCdQuery = ""+
-                "AND FFL.API_SITE_CD = '" +cdSite+ "' ";
-            }
-
+            
             if(sequence == null)
             {
                 sequenceQuery = "" ;
@@ -5441,15 +5445,26 @@ exports.selectReportExport = function (req,  processState, pagingCount,cdSite, f
                 "AND FFL.API_SEQ = '" + sequence + "' ";
             }
 
+            if(cdSite == null)
+            {
+                siteCdQuery = ""+
+                "AND API_SITE_CD is not null " ;
+            }
+            else
+            {
+                siteCdQuery = ""+
+                "AND API_SITE_CD = '" +cdSite+ "' ";
+            }
+
             let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, FFL.RETURNBIGO RETURNBIGO " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, NVL(TO_CHAR(TO_DATE(FFL.IVGTRDATE,'YYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS'),' ') AS IVGTRDATE, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, NVL(FFL.RETURNBIGO,'') RETURNBIGO , FFL.FEEDBACKFLAG " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
                 "(SELECT " +
-                    "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, " +
+                    "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, IVGTRDATE, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
-                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, IVGTRNOSRAL, RETURNBIGO " +
+                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, NVL(IVGTRNOSRAL,0) IVGTRNOSRAL, REPLACE(NVL(RETURNBIGO, ' ' ),'null',' ')RETURNBIGO , FEEDBACKFLAG " +
                 "FROM " +
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +
@@ -5458,11 +5473,12 @@ exports.selectReportExport = function (req,  processState, pagingCount,cdSite, f
                 "AND CAST(FFL.AUTOSENDTIME as Date) >= TO_DATE(:startDate, 'YYMMDDHH24MISS') " +
                 "AND CAST(FFL.AUTOSENDTIME as Date) <= TO_DATE(:endDate, 'YYMMDDHH24MISS') " +
                 siteCdQuery +
-                processStateQuery +
+                
                 fileNameQuery +
                 sequenceQuery +
+                processStateQuery ;//+
                 // "AND RETURNFLAG = :retrinFlag " +
-                "ORDER BY FFL.SEQ DESC";
+                // "ORDER BY FFL.SEQ DESC";
 
             
             
