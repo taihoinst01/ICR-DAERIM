@@ -5458,7 +5458,7 @@ exports.selectReportExport = function (req,  processState, pagingCount,cdSite, f
 
             let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, NVL(TO_CHAR(TO_DATE(FFL.IVGTRDATE,'YYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS'),' ') AS IVGTRDATE, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, NVL(FFL.RETURNBIGO,'') RETURNBIGO , FFL.FEEDBACKFLAG " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(AUTOSENDTIME,'WW') AS YEARWEEK, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, NVL(TO_CHAR(TO_DATE(FFL.IVGTRDATE,'YYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS'),' ') AS IVGTRDATE, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, NVL(FFL.RETURNBIGO,'') RETURNBIGO , FFL.FEEDBACKFLAG " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
                 "(SELECT " +
@@ -5632,7 +5632,15 @@ exports.insertIcrSymspell = function (typoData, docTopType, done) {
                 }
 
                 if (bool) {
-                    await conn.execute(insSymspell, [typoData[i].updText, typoData[i].orgText, docTopType]);
+                    if(typoData[i].orgText)
+                    {
+                        if(typoData[i].updText)
+                        {
+                            await conn.execute(insSymspell, [typoData[i].updText, typoData[i].orgText, docTopType]);
+                        }
+                        
+                    }
+                    
                 }
             }            
 

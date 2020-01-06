@@ -82,6 +82,19 @@ router.post('/selectBatchPoMlExport', function (req, res) {
 });
 
 
+router.get('/downloadExcel', function (req, res){
+    sync.fiber(function(){
+        var saveFileName = req.query.fileName;
+        var file = appRoot + '/report/' + saveFileName;
+        var mimetype = mime.lookup(file);
+        res.setHeader('Content-disposition', 'attachment; filename=' + getDownloadFilename(req, saveFileName));
+        res.setHeader('Content-type', mimetype);
+        var filestream = fs.createReadStream(file);
+        filestream.pipe(res);
+    })
+})
+
+
 // 보고서 생성 후 Excel 다운로드
 router.post('/selectReportExport', function (req, res) {
     sync.fiber(function () {
@@ -114,7 +127,8 @@ router.post('/selectReportExport', function (req, res) {
             var results = [];
             
             header.push("NO");
-            header.push("스캔시간");
+            header.push("주차");
+            header.push("스캔일자");
             header.push("파일명");
             header.push("현장코드");
 
@@ -131,17 +145,17 @@ router.post('/selectReportExport', function (req, res) {
 
             if(docTopType == "58")
             {
-                options = {'!cols': [{ wch: 6 }, { wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 50 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 25 }
+                options = {'!cols': [{ wch: 6 }, { wch: 20 },{ wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 50 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 25 }
                     , { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 20 } ]};
                 
             }
             else if (docTopType == "51")
             {
-                options = {'!cols': [{ wch: 6 },{ wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 25 }]};
+                options = {'!cols': [{ wch: 6 },{ wch: 20 },{ wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 25 }]};
             }
             else if(docTopType == "61")
             {
-                options = {'!cols': [{ wch: 6 },{ wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+                options = {'!cols': [{ wch: 6 },{ wch: 20 },{ wch: 20 }, { wch: 40 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
                     , { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 15 }]};
             }
 
@@ -155,7 +169,9 @@ router.post('/selectReportExport', function (req, res) {
                     var results = [];
                     var items = result[1][m].EXPORTDATA;
                     results.push(m+1);
-                    results.push(result[1][m].AUTOSENDTIME);
+                    results.push(result[1][m].YEARWEEK);
+                    results.push(result[1][m].AUTOSENDTIME.substring(0,10));
+                    
                     results.push(result[1][m].FILENAME.substring(result[1][m].FILENAME.lastIndexOf('/') + 1));
                     results.push(result[1][m].APISITECD);
                     items = items.replace(/\"/gi, '').slice(1, -1);
@@ -230,7 +246,8 @@ router.post('/selectReportExport', function (req, res) {
                     totalSuccess = Number(totalSuccess) + Number(successCnt);
                     results.push(failCnt);
                     totalfail = Number(totalfail) + Number(failCnt);
-                    average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
+                    // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
+                    average = (successCnt / (successCnt + failCnt)).toFixed(3) ;
                     results.push(average);
                     totalAverage = Number(totalAverage) + Number(average) ;
                     data.push(results);
@@ -248,11 +265,14 @@ router.post('/selectReportExport', function (req, res) {
                 for (var i in docLabelList) {
                     if (docLabelList[i].AMOUNT == "multi") multiLabelNumArr.push(i);
                 }
-                
+                var resultCnt = 1;
                 for (var m in docDataList) {
                     var multiLabelYLocArr = [];
                     var multiEntryInfo = getMultiLabelYLoc1(docDataList[m].EXPORTDATA, multiLabelNumArr);
                     multiLabelYLocArr = multiEntryInfo.dataArr;
+
+
+
 
                     var totalAverage = 0;
                     var totalSuccess = 0;
@@ -260,18 +280,22 @@ router.post('/selectReportExport', function (req, res) {
                     var successCnt = 0;
                     var failCnt = 0;
                     var average = 0;
+                    
 
-
+                    resultCnt = resultCnt + multiEntryInfo.dataCount;
                     for (var k =0; k < multiEntryInfo.dataCount; k++) {
                         var results = [];
+                        var cntResults = [];
                         if (k == 0) {
                             results.push(docDataList[m].RNUM);
-                            results.push(docDataList[m].AUTOSENDTIME);
+                            results.push(result[1][m].YEARWEEK);
+                            results.push(docDataList[m].AUTOSENDTIME.substring(0,10));
                             results.push(docDataList[m].FILENAME.substring(docDataList[m].FILENAME.lastIndexOf('/') + 1));
                             results.push(docDataList[m].APISITECD);
                         }
                         else
                         {
+                            results.push("");
                             results.push("");
                             results.push("");
                             results.push("");
@@ -394,13 +418,24 @@ router.post('/selectReportExport', function (req, res) {
                         {
                             // console.log("success : " + successCnt);
                             // console.log("fail : " + failCnt);
-                            results.push(successCnt);
-                            results.push(failCnt);
-                            average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
-                            results.push(average);
+                            // results.push(successCnt);
+                            // results.push(failCnt);
+                            // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
+                            // results.push(average);
+
+                            cntResults.push(successCnt);
+                            cntResults.push(failCnt);
+                            // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
+                            average = (successCnt / (successCnt + failCnt)).toFixed(3) ;
+                            cntResults.push(average);
                         }
                         
                         data.push(results);
+                    }
+                    if(cntResults)
+                    {
+                        // data[parseInt(resultCnt) - parseInt(resultCnt - (multiEntryInfo.dataCount ))].push(successCnt,failCnt,average);
+                        data[ parseInt(resultCnt) - parseInt(multiEntryInfo.dataCount )].push(successCnt,failCnt,average);
                     }
                 }
             }
@@ -413,7 +448,7 @@ router.post('/selectReportExport', function (req, res) {
                 for (var i in docLabelList) {
                     if (docLabelList[i].AMOUNT == "multi") multiLabelNumArr.push(i);
                 }
-                
+                var resultCnt = 1;
                 for (var m in docDataList) {
                     var multiLabelYLocArr = [];
                     var multiEntryInfo = getMultiLabelYLoc1(docDataList[m].EXPORTDATA, multiLabelNumArr);
@@ -426,17 +461,20 @@ router.post('/selectReportExport', function (req, res) {
                     var failCnt = 0;
                     var average = 0;
 
-
+                    resultCnt = resultCnt + multiEntryInfo.dataCount;
                     for (var k =0; k < multiEntryInfo.dataCount; k++) {
                         var results = [];
+                        var cntResults = [];
                         if (k == 0) {
                             results.push(docDataList[m].RNUM);
-                            results.push(docDataList[m].AUTOSENDTIME);
+                            results.push(result[1][m].YEARWEEK);
+                            results.push(docDataList[m].AUTOSENDTIME.substring(0,10));
                             results.push(docDataList[m].FILENAME.substring(docDataList[m].FILENAME.lastIndexOf('/') + 1));
                             results.push(docDataList[m].APISITECD);
                         }
                         else
                         {
+                            results.push("");
                             results.push("");
                             results.push("");
                             results.push("");
@@ -605,19 +643,31 @@ router.post('/selectReportExport', function (req, res) {
                         {
                             // console.log("success : " + successCnt);
                             // console.log("fail : " + failCnt);
-                            results.push(successCnt);
-                            results.push(failCnt);
-                            average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
-                            results.push(average);
+                            // results.push(successCnt);
+                            // results.push(failCnt);
+                            // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
+                            // results.push(average);
+
+                            cntResults.push(successCnt);
+                            cntResults.push(failCnt);
+                            // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
+                            average = (successCnt / (successCnt + failCnt)).toFixed(3) ;
+                            cntResults.push(average);
                         }
                         
                         data.push(results);
+                    }
+                    if(cntResults)
+                    {
+                        // data[parseInt(resultCnt) - parseInt(resultCnt - (multiEntryInfo.dataCount ))].push(successCnt,failCnt,average);
+                        data[ parseInt(resultCnt) - parseInt(multiEntryInfo.dataCount )].push(successCnt,failCnt,average);
                     }
                 }
             }
 
             var buffer = xlsx.build([{name:sheetName, data: data}], options);
-            fs.writeFile(sheetName+"_"+getTimeStamp()+".xlsx", buffer, (err) => {
+            var saveFileName = sheetName+"_"+getTimeStamp()+".xlsx"
+            fs.writeFile('./report/' + saveFileName, buffer, (err) => {
                 if (err) throw err;
                 console.log("Report Create Done....");
                 // res.download("D://bob", sheetName+"_"+getTimeStamp()+".xlsx", function(err) {
@@ -629,14 +679,37 @@ router.post('/selectReportExport', function (req, res) {
                 // }); // pass in the path to the newly created file
         
             })
-
+            returnJson.fileName = saveFileName;
+  
         } catch (e) {
             console.log(e);
             returnJson = { 'error': e };
         } finally {
-            returnJson = { 'error': "SUCCESS" }
+            returnJson.error = "SUCCESS";
             res.send(returnJson);
         }
+
+        //     var buffer = xlsx.build([{name:sheetName, data: data}], options);
+        //     fs.writeFile(sheetName+"_"+getTimeStamp()+".xlsx", buffer, (err) => {
+        //         if (err) throw err;
+        //         console.log("Report Create Done....");
+        //         // res.download("D://bob", sheetName+"_"+getTimeStamp()+".xlsx", function(err) {
+        //         //     console.log('download callback called');
+        //         //     if( err ) {
+        //         //         console.log('something went wrong');
+        //         //     }
+        
+        //         // }); // pass in the path to the newly created file
+        
+        //     })
+
+        // } catch (e) {
+        //     console.log(e);
+        //     returnJson = { 'error': e };
+        // } finally {
+        //     returnJson = { 'error': "SUCCESS" }
+        //     res.send(returnJson);
+        // }
     });
 });
 
@@ -932,9 +1005,5 @@ function dateCheck(date, docType) {
     // console.log(date +"||"+ result);
     return result;
 }
-
-
-
-
 
 module.exports = router;
