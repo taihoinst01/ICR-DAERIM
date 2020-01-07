@@ -158,7 +158,7 @@ function uiLearnTraining_new(filepath, isAuto, callback) {
                     // TBL_BATCH_PO_ML_EXPORT table에 exportData 가공
                     var exportData = sync.await(processingExportData(retData.data, labelData.rows, sync.defer()));
                     // TBL_BATCH_PO_ML_EXPORT table insert
-                    sync.await(oracle.insertBatchPoMlExportFromUi([retData.docCategory.DOCTOPTYPE, propertiesConfig.auto.ftpFileUrl+filepath, exportData], sync.defer()));
+                    sync.await(oracle.insertBatchPoMlExportFromUi([retData.docCategory.DOCTOPTYPE, propertiesConfig.auto.ftpFileUrl+resPyArr[i].originFileName.split('_')[0]+"/"+dt+"/" +filepath, exportData], sync.defer()));
                 }
 
                 // retData.fileinfo = {
