@@ -1560,6 +1560,7 @@ function addRow() {
         }
         appendRowHtml += '</tr>'
         $('#popTableContent').find('tbody').append(appendRowHtml);
+        $('#popTableContentDiv').scrollTop($('#popTableContentDiv')[0].scrollHeight);
     })
 }
 
