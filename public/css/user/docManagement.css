@@ -516,3 +516,16 @@ input[name="searchStartDate"], input[name="searchEndDate"] {
   padding: 26px;
   height: 820px !important;
 }
+
+.docPopAddBtn {
+  width: 49.79%;
+  height: 40px;
+  text-align: center;
+  background-color: #EA7169;
+  line-height: 40px;
+  margin-top: 13px;
+  cursor: pointer;
+  font-weight: bold;
+  float: left;
+  border: 1px solid;
+}

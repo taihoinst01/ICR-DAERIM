@@ -12,6 +12,21 @@ var exceljs = require('exceljs');
 var appRoot = require('app-root-path').path;
 var router = express.Router();
 var propertiesConfig = require(appRoot + '/config/propertiesConfig.js');
+var cron = require('node-cron');
+
+// batch
+// 인식률 보고서 삭제
+cron.schedule('0 6 * * *', function () {
+    console.log('info', 'running a task every minute / ' + new Date());
+    fs.readdir('./report/', (err, fileList) => {
+        fileList.forEach(file => {
+            fs.unlink('./report/' + file, function(err) {
+                if (err) throw err;
+                console.log('file deleted');
+              });
+        })
+    })
+}).start();
 
 // Session
 var session = require('express-session');

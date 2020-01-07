@@ -29,6 +29,9 @@ function clickEventHandlers() {
     btnReportClick(); // 보고서 생성 버튼
     hideBtnClick(); // 미리보기 이미지 숨김버튼
     clickPopCloseBtn(); // 팝업 닫기 버튼
+    addRow(); // 팝업창 멀티 로우 추가 버튼
+    changePopMultiTblAllChk(); // 팝업창 체크박스
+    deletePopMultiTblRow(); // 팝업창 테이블 행 삭제
 }
 
 // 문서양식 조회 및 select box 렌더링
@@ -231,8 +234,9 @@ function selectReportExport(params, isInit) {
             // } else {
             //     fn_alert('alert', 'ERROR');
             }
+            window.location.href = '/docManagement/downloadExcel?fileName=' + data.fileName;
             endProgressBar(progressId);
-            fn_alert('alert', '인식률 보고서 생성 완료!');
+            //fn_alert('alert', '인식률 보고서 생성 완료!');
         },
         error: function (err) {
             console.log(err);
@@ -632,8 +636,8 @@ function appendPopTable(fileName, seq, docTopType) {
         var popMultiEntryRowHtml = '';
         var popTableHeaderColHTML = '';
         var popTableBodyColHTML = '';
-        var popTableColHTML = '<colgroup>';
-        var appendMultiTableHeadHtml = '<thead><tr>';
+        var popTableColHTML = '<colgroup><col style="width:30px">';
+        var appendMultiTableHeadHtml = '<thead><tr><th scope="row"><input type="checkbox" id="multiTableAllChk"></th>';
         var singleNumList = [];
         var multiNumList = [];
         $('.pop_content_L_single').hide();
@@ -689,7 +693,7 @@ function appendPopTable(fileName, seq, docTopType) {
         }
 
         // multi 엔트리 렌더링
-        popMultiEntryRowHtml += '<tr>';
+        popMultiEntryRowHtml += '<tr><td><input type="checkbox" class="multiRowChk"></td>';
         for (var i = 0; i < multiNumList.length; i++) {
             var valueText = $('#tbody_docList > .originalTr').eq(targetNum).find('td').eq(Number(multiNumList[i]) + 10).find('input').eq(0).val();
             popMultiEntryRowHtml += '<td><input type="text" value="' + valueText + '" class="content right_border entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' + labels[multiNumList[i]].SEQNUM + '" data-amount="' + labels[multiNumList[i]].AMOUNT + '"></td>';
@@ -698,7 +702,7 @@ function appendPopTable(fileName, seq, docTopType) {
 
         if ($('.multiTr_' + seq).length > 0) {       
             for (var i = 0; i < $('.multiTr_' + seq).length; i++) {
-                popMultiEntryRowHtml += '<tr>'
+                popMultiEntryRowHtml += '<tr><td><input type="checkbox" class="multiRowChk"></td>'
                 for (var j = 0; j < multiNumList.length; j++) {
                     var valueText = $('.multiTr_' + seq).eq(i).find('td').eq(Number(multiNumList[j]) + 10).find('input').eq(0).val();    
                     popMultiEntryRowHtml += '<td><input type="text" value="' + valueText + '" class="content right_border entryIpt" data-originalvalue="' + valueText + '" data-lableSeq="' + labels[multiNumList[j]].SEQNUM + '" data-amount="' + labels[multiNumList[j]].AMOUNT + '"></td>';
@@ -804,7 +808,7 @@ function btnSaveClick() {
             var multiTrCnt = $multiTr.length;
             for (var i = 0; i <multiTrCnt; i++) {
                 for(var j = 0; j < multiNumList.length; j++) {
-                    var multiEntryVal = $multiTr.eq(i).find('td').eq(j).find('input').val();
+                    var multiEntryVal = $multiTr.eq(i).find('td').eq(j + 1).find('input').val();
                     saveDataArr[multiNumList[j]].value.push(multiEntryVal);
                 }
             }
@@ -821,8 +825,8 @@ function btnSaveClick() {
                 var tempList = [];
                 for(var j = 0; j < $row.eq(i).find('td').length; j++) {
                     for( var k = 0; k < lableOrderList.length; k++) {
-                        if(lableOrderList[k] == $row.eq(i).find('td').eq(j).find('input').attr('data-lableSeq')) {
-                            tempList[k] = {'orgText': $row.eq(i).find('td').eq(j).find('input').attr('data-originalvalue'), 'updText': $row.eq(i).find('td').eq(j).find('input').val()}
+                        if(lableOrderList[k] == $row.eq(i).find('td').eq(j + 1).find('input').attr('data-lableSeq')) {
+                            tempList[k] = {'orgText': $row.eq(i).find('td').eq(j + 1).find('input').attr('data-originalvalue'), 'updText': $row.eq(i).find('td').eq(j + 1).find('input').val()}
                         }
                     }
                 }
@@ -1180,8 +1184,8 @@ function makeToDataForSend(convertFilePath, selectObject) {
                     var $td = $row.eq(j).find('td');
                     var tdLength = $td.length;
                     for(var k = 0; k < tdLength; k++) {
-                        if($td.eq(k).find('input').attr('data-lableSeq') == labels[i].SEQNUM) {
-                            tempArr.push({'value': $td.eq(k).find('input').val()});
+                        if($td.eq(k + 1).find('input').attr('data-lableSeq') == labels[i].SEQNUM) {
+                            tempArr.push({'value': $td.eq(k + 1).find('input').val()});
                         }
                     }
                     ocrDataItem = {
@@ -1427,7 +1431,7 @@ function setDivHeight()
         var objSet   = $('#popTableContentDiv')[0];
         var objTarHeight= $('.pop_content_L_leftBottom .table_style03')[0].offsetHeight;
      
-        objSet.style.height  = ((objTarHeight - 44)) + "px";
+        objSet.style.height  = ((objTarHeight - 96)) + "px";
 
 }
 
@@ -1542,4 +1546,35 @@ function appendPopTable2(fileName, seq, docTopType) {
 
     $('#popTableHeaer').html('').append(popTableHeaderColHTML + popTableHeaderTheadHTML);
     $('#popTableContent').html('').append(popTableHeaderColHTML + popTableContentHTML);
+}
+
+function addRow() {
+    $('#rowAddBtn').on('click', function(){
+        var tdLength = $('#popTableHeaer').find('th').length;
+        var appendRowHtml = '<tr><td><input type="checkbox" class="multiRowChk"></td>';
+
+        for(var j = 0; j < labels.length; j++) {
+            if(labels[j].AMOUNT == 'multi') {
+                appendRowHtml += '<td><input type="text" class="content right_border entryIpt" data-originalvalue="" data-lableseq="' + labels[j].SEQNUM + '" data-amount="multi"></td>'
+            }
+        }
+        appendRowHtml += '</tr>'
+        $('#popTableContent').find('tbody').append(appendRowHtml);
+    })
+}
+
+function changePopMultiTblAllChk() {
+    $(document).on('click', '#multiTableAllChk', function() {
+        if( $(this).is(':checked') ){
+            $('.multiRowChk').prop('checked', true);
+        }else{
+            $('.multiRowChk').prop('checked', false);
+        }
+    })
+}
+
+function deletePopMultiTblRow() {
+    $('#rowRemoveBtn').on('click', function(){
+        $('.multiRowChk:checked').closest('tr').remove();
+    })
 }

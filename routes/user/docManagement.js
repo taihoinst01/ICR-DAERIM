@@ -13,6 +13,8 @@ var oracle = require('../util/oracle.js');
 var sync = require('../util/sync.js');
 var xlsx = require('node-xlsx');
 var fs = require('fs');
+var mime = require('mime');
+var iconvLite = require('iconv-lite');
 // var batch = require('../util/batch.js');
 
 /***************************************************************
@@ -80,6 +82,18 @@ router.post('/selectBatchPoMlExport', function (req, res) {
         }
     });
 });
+
+router.get('/downloadExcel', function (req, res){
+    sync.fiber(function(){
+        var saveFileName = req.query.fileName;
+        var file = appRoot + '/report/' + saveFileName;
+        var mimetype = mime.lookup(file);
+        res.setHeader('Content-disposition', 'attachment; filename=' + getDownloadFilename(req, saveFileName));
+        res.setHeader('Content-type', mimetype);
+        var filestream = fs.createReadStream(file);
+        filestream.pipe(res);
+    })
+})
 
 
 // 보고서 생성 후 Excel 다운로드
@@ -617,7 +631,8 @@ router.post('/selectReportExport', function (req, res) {
             }
 
             var buffer = xlsx.build([{name:sheetName, data: data}], options);
-            fs.writeFile(sheetName+"_"+getTimeStamp()+".xlsx", buffer, (err) => {
+            var saveFileName = sheetName+"_"+getTimeStamp()+".xlsx"
+            fs.writeFile('./report/' + saveFileName, buffer, (err) => {
                 if (err) throw err;
                 console.log("Report Create Done....");
                 // res.download("D://bob", sheetName+"_"+getTimeStamp()+".xlsx", function(err) {
@@ -629,12 +644,13 @@ router.post('/selectReportExport', function (req, res) {
                 // }); // pass in the path to the newly created file
         
             })
-
+            returnJson.fileName = saveFileName;
+  
         } catch (e) {
             console.log(e);
             returnJson = { 'error': e };
         } finally {
-            returnJson = { 'error': "SUCCESS" }
+            returnJson.error = "SUCCESS";
             res.send(returnJson);
         }
     });
@@ -642,6 +658,21 @@ router.post('/selectReportExport', function (req, res) {
 
 
 
+function getDownloadFilename(req, filename) {
+    var header = req.headers['user-agent'];
+
+    if (header.includes("MSIE") || header.includes("Trident")) { 
+        return encodeURIComponent(filename).replace(/\\+/gi, "%20");
+    } else if (header.includes("Chrome")) {
+        return iconvLite.decode(iconvLite.encode(filename, "UTF-8"), 'ISO-8859-1');
+    } else if (header.includes("Opera")) {
+        return iconvLite.decode(iconvLite.encode(filename, "UTF-8"), 'ISO-8859-1');
+    } else if (header.includes("Firefox")) {
+        return iconvLite.decode(iconvLite.encode(filename, "UTF-8"), 'ISO-8859-1');
+    }
+
+    return filename;
+}
 // ocr data 전송하기
 router.post('/sendOcrData', function (req, res) {
     sync.fiber(function () {
