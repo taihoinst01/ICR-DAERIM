@@ -96,19 +96,6 @@ router.get('/downloadExcel', function (req, res){
 })
 
 
-router.get('/downloadExcel', function (req, res){
-    sync.fiber(function(){
-        var saveFileName = req.query.fileName;
-        var file = appRoot + '/report/' + saveFileName;
-        var mimetype = mime.lookup(file);
-        res.setHeader('Content-disposition', 'attachment; filename=' + getDownloadFilename(req, saveFileName));
-        res.setHeader('Content-type', mimetype);
-        var filestream = fs.createReadStream(file);
-        filestream.pipe(res);
-    })
-})
-
-
 // 보고서 생성 후 Excel 다운로드
 router.post('/selectReportExport', function (req, res) {
     sync.fiber(function () {
@@ -818,19 +805,21 @@ router.post('/updateBatchPoMlExport', function (req, res) {
                     }
                 } else {
                     var emptyCnt = 0;
+                    var tempSaveData = '';
                     for (var j = 0; j < data[i].value.length; j++) {
                         var yLocTemp = (j + 1) * 50;
-                        if (data[i].value[j]) {
-                            if (j != 0) saveData += ' | ';
-                            saveData += '"' + yLocTemp + '::' + data[i].value[j] + '';
-                        } else {
+                        if(j != 0) {
+                            tempSaveData += ' | '
+                        }
+                        if (!data[i].value[j]) {
                             emptyCnt++;
-                        }                        
+                        } 
+                        tempSaveData += yLocTemp + '::' + data[i].value[j];               
                     }
                     if (emptyCnt == data[i].value.length) {
                         saveData += 'null,';
                     } else {
-                        saveData += '",';
+                        saveData += '"' + tempSaveData + '",';
                     }
                 }
             }
