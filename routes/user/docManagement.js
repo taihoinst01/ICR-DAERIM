@@ -378,7 +378,8 @@ router.post('/selectReportExport', function (req, res) {
                                 var isEmpty = false;
                                 if(k == 0)
                                 {
-                                    textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : itemArr[0] + ((h == 0) ? '' : ' | ');
+                                    textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : "";
+                                    //textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : itemArr[0] + ((h == 0) ? '' : ' | ');
                                     results.push(textVal);
                                     if(textVal != "")
                                     {
@@ -579,7 +580,8 @@ router.post('/selectReportExport', function (req, res) {
                                 var isEmpty = false;
                                 if(k == 0)
                                 {
-                                    textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : itemArr[0] + ((h == 0) ? '' : ' | ');
+                                    textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : "";
+                                    //textVal = (itemArr[0].split('::')[1]) ? itemArr[0].split('::')[1] : itemArr[0] + ((h == 0) ? '' : ' | ');
                                     results.push(textVal);
                                     if(textVal != "")
                                     {

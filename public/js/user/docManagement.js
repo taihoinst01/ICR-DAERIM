@@ -712,6 +712,7 @@ function appendPopTable(fileName, seq, docTopType) {
         }
 
         $('#popTableContent').append(popTableBodyColHTML + popMultiEntryRowHtml );
+        $('#rowCnt').val($('#popTableContent tr').length);
     }  
 }
 
@@ -1093,9 +1094,7 @@ function btnReportClick() {
         var fileName = $('#searchFileNm').val();
         var sequence = $('#searchSequence').val();
         
-
-        var params = {
-            
+        var params = {          
             'docTopType': docTopType,
             'startDate': startDate,
             'endDate': endDate,
@@ -1104,6 +1103,7 @@ function btnReportClick() {
             'fileName': fileName,
             'sequence': sequence,
         };
+
         hidePreviewImage();
         // selectBatchPoMlExport(params, false);
         selectReportExport(params, false);
@@ -1561,6 +1561,7 @@ function addRow() {
         appendRowHtml += '</tr>'
         $('#popTableContent').find('tbody').append(appendRowHtml);
         $('#popTableContentDiv').scrollTop($('#popTableContentDiv')[0].scrollHeight);
+        $('#rowCnt').val($('#popTableContent tr').length);
     })
 }
 
@@ -1577,5 +1578,6 @@ function changePopMultiTblAllChk() {
 function deletePopMultiTblRow() {
     $('#rowRemoveBtn').on('click', function(){
         $('.multiRowChk:checked').closest('tr').remove();
+        $('#rowCnt').val($('#popTableContent tr').length);
     })
 }

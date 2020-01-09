@@ -281,7 +281,7 @@ input[name="searchStartDate"], input[name="searchEndDate"] {
 
 .col_title_wrap {
   background-color: #dda8a5;
-  width: 100px;
+  width: 150px;
   height: 100%;
   float: left;
   line-height: 40px;
@@ -321,7 +321,7 @@ input[name="searchStartDate"], input[name="searchEndDate"] {
 
 .col_contents_02 {
   float: left;
-  width: 79%;
+  width: 69%;
   margin: 1px;
 }
 
@@ -516,16 +516,53 @@ input[name="searchStartDate"], input[name="searchEndDate"] {
   padding: 26px;
   height: 820px !important;
 }
+.leftBottom_optionBar {
+  width: 100%;
+  margin-top: 13px;
+}
 
+.leftBottom_optionBar_L {
+  width: 48%;
+  float: left;
+}
+
+.leftBottom_optionBar_R {
+  width: 48%;
+  float: left;
+}
 .docPopAddBtn {
-  width: 49.79%;
+  width: 48%;
   height: 40px;
   text-align: center;
   background-color: #EA7169;
   line-height: 40px;
-  margin-top: 13px;
   cursor: pointer;
   font-weight: bold;
   float: left;
   border: 1px solid;
+}
+
+#rowCnt {
+  width: 50px;
+  margin-left: 10px;
+}
+
+.width50 {
+  width: 50%;
+}
+
+.leftBottom_optionBar_R .width50 {
+  float: left;
+  height: 40px;
+  line-height: 40px;
+}
+
+.width50 .ez-checkbox {
+  margin-top: 10px;
+}
+
+.textStyle {
+  display: inline-block;
+  height: 40px;
+  vertical-align: top;
 }
