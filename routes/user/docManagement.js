@@ -141,6 +141,7 @@ router.post('/selectReportExport', function (req, res) {
             header.push("성공");
             header.push("실패");
             header.push("평균");
+            header.push("미대상 송장");
             
             data.push(header);
 
@@ -250,6 +251,7 @@ router.post('/selectReportExport', function (req, res) {
                     // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
                     average = (successCnt / (successCnt + failCnt)).toFixed(3) ;
                     results.push(average);
+                    results.push(result[1][m].REPORTYN == 'Y' ? 'N' : 'Y');
                     totalAverage = Number(totalAverage) + Number(average) ;
                     data.push(results);
                 }
@@ -428,8 +430,14 @@ router.post('/selectReportExport', function (req, res) {
                             cntResults.push(successCnt);
                             cntResults.push(failCnt);
                             // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
-                            average = (successCnt / (successCnt + failCnt)).toFixed(3) ;
+                            if(docDataList[m].REPORTROWCNT == null) {
+                                average = (successCnt / (successCnt + failCnt)).toFixed(3) ;
+                            } else {
+                                average = (successCnt / (docDataList[m].REPORTROWCNT * multiLabelNumArr.length)).toFixed(3) ;
+                                failCnt = failCnt + ((docDataList[m].REPORTROWCNT - multiEntryInfo.dataCount) * multiLabelNumArr.length);
+                            }
                             cntResults.push(average);
+                            
                         }
                         
                         data.push(results);
@@ -437,7 +445,7 @@ router.post('/selectReportExport', function (req, res) {
                     if(cntResults)
                     {
                         // data[parseInt(resultCnt) - parseInt(resultCnt - (multiEntryInfo.dataCount ))].push(successCnt,failCnt,average);
-                        data[ parseInt(resultCnt) - parseInt(multiEntryInfo.dataCount )].push(successCnt,failCnt,average);
+                        data[ parseInt(resultCnt) - parseInt(multiEntryInfo.dataCount )].push(successCnt,failCnt,average, docDataList[m].REPORTYN == "Y" ? "N" : "Y");
                     }
                 }
             }
@@ -654,7 +662,12 @@ router.post('/selectReportExport', function (req, res) {
                             cntResults.push(successCnt);
                             cntResults.push(failCnt);
                             // average = ((successCnt / (successCnt + failCnt)) * 100).toFixed(2) ;
-                            average = (successCnt / (successCnt + failCnt)).toFixed(3) ;
+                            if(docDataList[m].REPORTROWCNT == null) {
+                                average = (successCnt / (successCnt + failCnt)).toFixed(3) ;
+                            } else {
+                                average = (successCnt / (docDataList[m].REPORTROWCNT * multiLabelNumArr.length)).toFixed(3) ;
+                                failCnt = failCnt + ((docDataList[m].REPORTROWCNT - multiEntryInfo.dataCount) * multiLabelNumArr.length);
+                            }
                             cntResults.push(average);
                         }
                         
@@ -663,7 +676,7 @@ router.post('/selectReportExport', function (req, res) {
                     if(cntResults)
                     {
                         // data[parseInt(resultCnt) - parseInt(resultCnt - (multiEntryInfo.dataCount ))].push(successCnt,failCnt,average);
-                        data[ parseInt(resultCnt) - parseInt(multiEntryInfo.dataCount )].push(successCnt,failCnt,average);
+                        data[ parseInt(resultCnt) - parseInt(multiEntryInfo.dataCount )].push(successCnt,failCnt,average, docDataList[m].REPORTYN == "Y" ? "N" : "Y");
                     }
                 }
             }
@@ -743,6 +756,9 @@ router.post('/sendOcrData', function (req, res) {
                 data: req.body.sendData,
                 dataCnt: req.body.dataCnt
             };
+            //var reportManagementData = req.body.reportManagementData;
+            // 보고서 미대상송장 및 멀티로우 업데이트
+            //sync.await(oracle.updateFtpFIleList(req.body.sendData.FILENAME, reportManagementData.reportYN, reportManagementData.reportRowCnt , sync.defer())); 
             console.log(reqParams)
             // console.log(JSON.stringify(reqParams))
             do {
@@ -794,6 +810,8 @@ router.post('/updateBatchPoMlExport', function (req, res) {
             var typoData = req.body.typoData;
             var numTypoData = req.body.numTypoData;
             var docTopType = req.body.docTopType;
+            var reportYN = req.body.reportYN;
+            var reportRowCnt = req.body.reportRowCnt;
             var returnJson;
             //var exportData = sync.await(oracle.selectSingleBatchPoMlExportFromFilePath(filePath, sync.defer()));
             //exportData = exportData.replace(/[\[\]\"]/gi, '');
@@ -832,6 +850,7 @@ router.post('/updateBatchPoMlExport', function (req, res) {
             }
             sync.await(oracle.insertIcrSymspell(typoData, docTopType, sync.defer()));
             sync.await(oracle.updateBatchPoMlExport(filePath, saveData, sync.defer()));
+            sync.await(oracle.updateFtpFIleList(filePath, reportYN, reportRowCnt, sync.defer()));
             returnJson = { 'data': saveData };
         } catch (e) {
             console.log(e);

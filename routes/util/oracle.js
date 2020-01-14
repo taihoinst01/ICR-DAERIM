@@ -5320,11 +5320,11 @@ exports.selectBatchPoMlExport = function (req,  processState, pagingCount,cdSite
 
            let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, NVL(TO_CHAR(TO_DATE(FFL.IVGTRDATE,'YYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS'),' ') AS IVGTRDATE, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, NVL(FFL.RETURNBIGO,'') RETURNBIGO , FFL.FEEDBACKFLAG " +
+                "FFL.REPORTROWCNT, FFL.REPORTYN, PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, NVL(TO_CHAR(TO_DATE(FFL.IVGTRDATE,'YYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS'),' ') AS IVGTRDATE, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, NVL(FFL.RETURNBIGO,'') RETURNBIGO , FFL.FEEDBACKFLAG " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
                 "(SELECT " +
-                    "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, IVGTRDATE, " +
+                    "REPORTROWCNT, REPORTYN, SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, IVGTRDATE, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
                     "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, NVL(IVGTRNOSRAL,0) IVGTRNOSRAL, REPLACE(NVL(RETURNBIGO, ' ' ),'null',' ')RETURNBIGO , FEEDBACKFLAG " +
                 "FROM " +
@@ -5458,13 +5458,13 @@ exports.selectReportExport = function (req,  processState, pagingCount,cdSite, f
 
             let basicQuery = "" +
             "SELECT " +
-                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(AUTOSENDTIME,'WW') AS YEARWEEK, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, NVL(TO_CHAR(TO_DATE(FFL.IVGTRDATE,'YYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS'),' ') AS IVGTRDATE, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, NVL(FFL.RETURNBIGO,'') RETURNBIGO , FFL.FEEDBACKFLAG " +
+                "PME.FILENAME, FFL.API_SITE_CD AS APISITECD, FFL.API_SEQ AS APISEQ, DTT.KORNM, TO_CHAR(AUTOSENDTIME,'WW') AS YEARWEEK, TO_CHAR(FFL.AUTOSENDTIME,'YYYY-MM-DD HH24:MI:SS') AS AUTOSENDTIME, NVL(TO_CHAR(TO_DATE(FFL.IVGTRDATE,'YYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS'),' ') AS IVGTRDATE, PME.EXPORTDATA, FFL.SEQ, NVL(FFL.ETC, ' ') AS ETC, FFL.API_SEQ API_SEQ, FFL.IVGTRNOSRAL IVGTRNOSRAL, NVL(FFL.RETURNBIGO,'') RETURNBIGO , FFL.FEEDBACKFLAG, FFL.REPORTYN, FFL.REPORTROWCNT " +
             "FROM " +
                 "TBL_BATCH_PO_ML_EXPORT PME, TBL_ICR_DOC_TOPTYPE DTT, " +
                 "(SELECT " +
                     "SEQ, FILEPATH || FILENAME AS FILENAME, AUTOSENDFLAG, AUTOSENDTIME, IVGTRDATE, " +
                     "AUTOTRAINFLAG, AUTOTRAINTIME, MANUALSENDFLAG, MANUALSENDTIME, " +
-                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, NVL(IVGTRNOSRAL,0) IVGTRNOSRAL, REPLACE(NVL(RETURNBIGO, ' ' ),'null',' ')RETURNBIGO , FEEDBACKFLAG " +
+                    "MANUALTRAINFLAG, MANUALTRAINTIME, RETURNFLAG, RETURNTIME, ETC, API_SEQ, API_SITE_CD, NVL(IVGTRNOSRAL,0) IVGTRNOSRAL, REPLACE(NVL(RETURNBIGO, ' ' ),'null',' ')RETURNBIGO , FEEDBACKFLAG, REPORTYN, REPORTROWCNT " +
                 "FROM " +
                     "TBL_FTP_FILE_LIST) FFL " +
                 "WHERE PME.FILENAME = FFL.FILENAME " +
@@ -6870,6 +6870,34 @@ exports.selectDocScanDate = function (req, done) {
 
             result = await conn.execute(query, [req]);
             return done(null, result.rows[0].SCANDATE);
+        } catch (err) { // catches errors in getConnection and the query
+            reject(err);
+        } finally {
+            if (conn) {   // the conn assignment worked, must release
+                try {
+                    await conn.release();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+    });
+};
+
+
+
+exports.updateFtpFIleList = function (filePath, reportYN, reportRowCnt, done) {
+    return new Promise(async function (resolve, reject) {
+        let conn;
+        let result;
+        try {
+
+            var filename = filePath.substring(filePath.lastIndexOf('/') + 1, filePath.length);
+            conn = await oracledb.getConnection(dbConfig);
+            var query = "UPDATE TBL_FTP_FILE_LIST SET REPORTROWCNT = :reportRowCnt ,REPORTYN = :reportYn WHERE FILENAME =:filePath";
+
+            await conn.execute(query, [reportRowCnt, reportYN, filename]);
+            return done(null, null);
         } catch (err) { // catches errors in getConnection and the query
             reject(err);
         } finally {

@@ -326,7 +326,8 @@ function appendSingleHTML(docDataList, docTopType) {
         var returnBigo = (docDataList[i].RETURNBIGO == null) ? "" : docDataList[i].RETURNBIGO.trim();
         var mlDataListHTML = '' +
             '<tr class="originalTr">' +
-            '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="hidden" value="' + docDataList[i].SEQ + '" name="seqOri" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
+            '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="hidden" value="' + docDataList[i].SEQ + '" name="seqOri" />' +
+            '<input type="checkbox" class="sta00_all" value="" name="listCheck" /><input type="hidden" value="' + docDataList[i].REPORTYN + '" name="reportYN"></div></td>' +
             '<td>' +
             '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +', this)">' +
             // '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +','+docDataList[i].AUTOSENDTIME.substring(0,4)+docDataList[i].AUTOSENDTIME.substring(5,7)+', this)">' +
@@ -381,7 +382,8 @@ function appendMultiHTML(docLabelList, docDataList, docTopType) {
             if (k == 0) {
                 mlDataListHTML = '' +
                     '<tr class="originalTr">' +
-                    '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="hidden" value="' + docDataList[i].SEQ + '" name="seqOri" /><input type="checkbox" class="sta00_all" value="" name="listCheck" /></div></td>' +
+                    '<td><div class="checkbox-options mauto"><input type="hidden" value="' + docDataList[i].API_SEQ + '" name="seq" /><input type="hidden" value="' + docDataList[i].IVGTRNOSRAL + '" name="ivgtrNoSral" /><input type="hidden" value="' + docDataList[i].SEQ + '" name="seqOri" />' +
+                    '<input type="checkbox" class="sta00_all" value="" name="listCheck" /><input type="hidden" value="' + docDataList[i].REPORTYN + '" name="reportYN"><input type="hidden" value="' + docDataList[i].REPORTROWCNT + '" name="reportRowCnt" originVal="' + docDataList[i].REPORTROWCNT + '"></div></td>' +
                     '<td>' +
                     // '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +','+docDataList[i].AUTOSENDTIME.substring(0,4)+docDataList[i].AUTOSENDTIME.substring(5,7)+', this)">' +
                     '<a href="#" title="양식" onclick="startClick(\'' + docDataList[i].FILENAME + '\')" ondblclick="openImagePop(\'' + docDataList[i].FILENAME + '\', ' + docDataList[i].SEQ + ',' +docTopType +', this)">' +
@@ -500,7 +502,7 @@ function startClick(fileName, seq) {
 
 //이미지 팝업 이벤트
 // function openImagePop(fileName, seq, docTopType, fileTime,  selectObject) {
-function openImagePop(fileName, seq, docTopType,   selectObject) {
+function openImagePop(fileName, seq, docTopType, selectObject) {
     clearTimeout(timeOut);
     $('#PopupImg').hide();
     var convertFilePath = fileName.split('.pdf')[0] + '-0.jpg';
@@ -517,7 +519,7 @@ function openImagePop(fileName, seq, docTopType,   selectObject) {
     // $('#PopupImg').attr('src', convertFilePath.replace(/\/uploads/, '/img'));
     // $('#PopupImg').attr('src', convertFilePath.replace(/\/uploads/, '/img/'+convertFilePath.split("/")[4].split("_")[0]+"/"+fileTime));
     appendPopTable(fileName, seq, docTopType, selectObject);
-    makeToDataForSend(convertFilePath, selectObject);
+    makeToDataForSend(convertFilePath, selectObject, docTopType);
     layer_open('docPop');
     setDivHeight();
     numClicks = 0;
@@ -565,7 +567,7 @@ function hideBtnClick(){
 }
 
 // 이미지 팝업 렌더링
-function appendPopTable(fileName, seq, docTopType) {
+function appendPopTable(fileName, seq, docTopType, selectObject) {
 
     // 팝업 초기화
     $('.pop_content_L_leftTop').empty();
@@ -595,6 +597,14 @@ function appendPopTable(fileName, seq, docTopType) {
         var popSingleEntryRowHtml = '';
         $('.pop_content_L_single').show();
         $('.pop_content_L_multi').hide();
+
+        // 미대상 송장
+        $('.pop_content_L_single_leftBottom .width50').html('').append('<input type="checkbox" class="single_reportYN" data-originalvalue="' + ($(selectObject).closest('td').prev().find('input[name="reportYN"]').val() == "Y" ? false : true) + '"><p class="textStyle">미대상 송장</p>');   
+        $('.single_reportYN').ezMark();   
+        if($(selectObject).closest('td').prev().find('input[name="reportYN"]').val() == 'N') {
+            $('.single_reportYN').click();
+        }
+
         if (labels.length > 0) {
             //레이블 렌더링
             for (var i in labels) {
@@ -643,6 +653,12 @@ function appendPopTable(fileName, seq, docTopType) {
         $('.pop_content_L_single').hide();
         $('.pop_content_L_multi').show();
 
+        //미대상 송장
+        $('.leftBottom_optionBar_R .width50:eq(1)').html('').append('<input type="checkbox" class="multi_reportYN" data-originalvalue="' + ($(selectObject).closest('td').prev().find('input[name="reportYN"]').val() == "Y" ? false : true) + '"><p class="textStyle">미대상 송장</p>');
+        $('.multi_reportYN').ezMark();
+        if($(selectObject).closest('td').prev().find('input[name="reportYN"]').val() == 'N') {
+            $('.multi_reportYN').click();
+        }
 
         //레이블 렌더링
         for (var i in labels) {
@@ -712,7 +728,17 @@ function appendPopTable(fileName, seq, docTopType) {
         }
 
         $('#popTableContent').append(popTableBodyColHTML + popMultiEntryRowHtml );
-        $('#rowCnt').val($('#popTableContent tr').length);
+
+        //멀티 엔트리 행 개수
+        if($(selectObject).closest('td').prev().find('input[name="reportRowCnt"]').val() == "null") {
+            $('#reportRowCnt').val($('#popTableContent tr').length);
+            $('#reportRowCnt').attr('originVal', $('#popTableContent tr').length)
+        } else {
+            $('#reportRowCnt').val($(selectObject).closest('td').prev().find('input[name="reportRowCnt"]').val());
+            $('#reportRowCnt').attr('originVal', $(selectObject).closest('td').prev().find('input[name="reportRowCnt"]').val())
+        }
+
+        
     }  
 }
 
@@ -923,13 +949,23 @@ function btnSaveClick() {
                     numTypoDataArr.push(numTypoData);
                 }
             }
-
+            var reportYN;
+            var reportRowCnt;
+            if($('#docTopTypeSelect').val() == "58" || $('#docTopTypeSelect').val() == "59" || $('#docTopTypeSelect').val() == "0") {
+                reportYN = inputClickCheck($('.single_reportYN')) ? 'N' : 'Y';
+                reportRowCnt = null;
+            } else {
+                reportYN = inputClickCheck($('.multi_reportYN')) ? 'N' : 'Y';
+                reportRowCnt = $('#reportRowCnt').val();
+            }
             var saveJson = {
                 'filePath': filePath,
                 'data': saveDataArr,
                 'typoData': typoDataArr,
                 'numTypoData': numTypoDataArr,
-                'docTopType': $('#docTopTypeSelect').val()
+                'docTopType': $('#docTopTypeSelect').val(),
+                'reportYN': reportYN,
+                'reportRowCnt': reportRowCnt
             };
 
             $.ajax({
@@ -1111,11 +1147,13 @@ function btnReportClick() {
 }
 
 // 팝업 전송 버튼 click 이벤트
-function makeToDataForSend(convertFilePath, selectObject) {
+function makeToDataForSend(convertFilePath, selectObject, docTopType) {
     $('#btn_pop_send').off().on('click', function () {
         var updateFlag = false;
         var $entryIpt = $('.entryIpt');
         var entryIptLength = $entryIpt.length;
+        var reportManagementData;
+
         for(var i = 0; i< entryIptLength; i++) {
             var originVal = $entryIpt.eq(i).attr('data-originalvalue');
             var updateVal = $entryIpt.eq(i).val();
@@ -1125,12 +1163,14 @@ function makeToDataForSend(convertFilePath, selectObject) {
                 break;
             }
         }
+        
         if(!saveFlag) {
             if(updateFlag) {
                 fn_alert('alert', '수정 후에는 저장 후 전송을 눌러주세요.');
                 return false;
             }
         }
+        
         var sendJson = [];
         var sendDocCount = 0;
         var invoiceType;
@@ -1561,7 +1601,7 @@ function addRow() {
         appendRowHtml += '</tr>'
         $('#popTableContent').find('tbody').append(appendRowHtml);
         $('#popTableContentDiv').scrollTop($('#popTableContentDiv')[0].scrollHeight);
-        $('#rowCnt').val($('#popTableContent tr').length);
+        $('#reportRowCnt').val($('#popTableContent tr').length);
     })
 }
 
@@ -1578,6 +1618,6 @@ function changePopMultiTblAllChk() {
 function deletePopMultiTblRow() {
     $('#rowRemoveBtn').on('click', function(){
         $('.multiRowChk:checked').closest('tr').remove();
-        $('#rowCnt').val($('#popTableContent tr').length);
+        $('#reportRowCnt').val($('#popTableContent tr').length);
     })
 }

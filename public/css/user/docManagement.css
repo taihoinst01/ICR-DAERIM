@@ -222,7 +222,7 @@ input[name="searchStartDate"], input[name="searchEndDate"] {
 }
 
 .pop_content_L_single .pop_content_L_leftTop {
-  height: 100%;
+  height: 96%;
   width: 100%;
   margin-bottom: 1px;
   max-height: 820px;
@@ -522,12 +522,12 @@ input[name="searchStartDate"], input[name="searchEndDate"] {
 }
 
 .leftBottom_optionBar_L {
-  width: 48%;
+  width: 50%;
   float: left;
 }
 
 .leftBottom_optionBar_R {
-  width: 48%;
+  width: 50%;
   float: left;
 }
 .docPopAddBtn {
@@ -542,7 +542,7 @@ input[name="searchStartDate"], input[name="searchEndDate"] {
   border: 1px solid;
 }
 
-#rowCnt {
+#reportRowCnt {
   width: 50px;
   margin-left: 10px;
 }
@@ -565,4 +565,18 @@ input[name="searchStartDate"], input[name="searchEndDate"] {
   display: inline-block;
   height: 40px;
   vertical-align: top;
+  font-weight: bold;
+  margin-left: 5px;
+  font-size: 14px;
 }
+
+
+.pop_content_L_single_leftBottom  {
+
+}
+.pop_content_L_single_leftBottom .width50 {
+  line-height: 40px;
+  float: right;
+  text-align: right;
+}
+

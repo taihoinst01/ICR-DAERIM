@@ -346,3 +346,12 @@ var fn_alert = function ( type, contents, callback ) {
     });
 }
 
+function inputClickCheck(obj){
+    var chk = false;
+
+    if($(obj).parent().hasClass('ez-checked')){
+        chk = true;
+    }
+
+    return chk;
+}
