@@ -95,7 +95,7 @@ function uiLearnTraining_new(filepath, isAuto, callback) {
         try{
             // var dt = new Date(); 
             var filename = (filepath.lastIndexOf("/") != -1) ? filepath.slice(filepath.lastIndexOf("/") + 1) : filepath;
-            var dt = sync.await(oracle.selectDocScanDate(filepath, sync.defer()));
+            var dt = sync.await(oracle.selectDocScanDate(filename, sync.defer()));
             // dt.toFormat('YYYYMM');
             var icrRestResult = sync.await(ocrUtil.icrRest(filepath, dt, isAuto, sync.defer()));
             // pythonConfig.columnMappingOptions.args = [];
