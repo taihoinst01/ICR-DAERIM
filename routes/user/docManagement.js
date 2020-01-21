@@ -15,6 +15,7 @@ var xlsx = require('node-xlsx');
 var fs = require('fs');
 var mime = require('mime');
 var iconvLite = require('iconv-lite');
+var Iconv  = require('iconv').Iconv;
 // var batch = require('../util/batch.js');
 
 /***************************************************************
@@ -83,12 +84,19 @@ router.post('/selectBatchPoMlExport', function (req, res) {
     });
 });
 
-router.get('/downloadExcel', function (req, res){
+router.get('/downloadExcel', function (req, res,){
     sync.fiber(function(){
+
         var saveFileName = req.query.fileName;
-        var file = appRoot + '/report/' + saveFileName;
+
+        //익스플로러 한글 변환 작업
+        var iconv = new Iconv('euc-kr', 'utf-8');
+        var saveFileNameKor = new Buffer(saveFileName, 'binary');
+        
+        
+        var file = appRoot + '/report/' + saveFileNameKor;
         var mimetype = mime.lookup(file);
-        res.setHeader('Content-disposition', 'attachment; filename=' + getDownloadFilename(req, saveFileName));
+        res.setHeader('Content-disposition', 'attachment; filename=' + getDownloadFilename(req, saveFileNameKor));
         res.setHeader('Content-type', mimetype);
         var filestream = fs.createReadStream(file);
         filestream.pipe(res);
