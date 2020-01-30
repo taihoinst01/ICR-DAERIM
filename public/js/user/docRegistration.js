@@ -79,7 +79,9 @@ function fn_selectDocLabelDefList(docToptype) {
 				console.log(data);
 
 				if (data) {
+					
 					var docToptypeList = data.docToptypeList;
+					
 					var docToptypeListLength = docToptypeList.length;
 					var appendDocListHtml = '';
 
@@ -338,6 +340,7 @@ $(document).on('change', '#tbody_docList .originalTr input[type=checkbox]', func
  */
 $(document).on('click', '#btn_save', function () {
 
+	
 	var changeList = [];
 	var insertList = [];
 	var docToptype = $('#docToptype').val();
@@ -362,6 +365,13 @@ $(document).on('click', '#btn_save', function () {
 		var essentialVal = $newTr[i].children[5].getElementsByTagName('input');
 		var essential = "";
 		console.log(essentialVal.length + "essentialVal.type : " + essentialVal[0].type);
+
+		/*정규식 SQL INJECTUION 방어*/
+		var regExp = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/gi;
+
+		var engNm = engNm.replace(regExp, "");
+		var korNm = korNm.replace(regExp, "");
+
 		if (essentialVal[0].type == "checkbox") {
 
 			console.log("essentialVal.checked : " + essentialVal[0].checked);
@@ -395,13 +405,23 @@ $(document).on('click', '#btn_save', function () {
 	var $changeTr = $('#tbody_docList .originalTr.on');
 	var changeTrLength = $changeTr.length;
 	for (var i = 0; i < changeTrLength; i++) {
+
 		var engNm = $changeTr[i].children[0].getElementsByTagName('input')[0].value.trim();
 		var korNm = $changeTr[i].children[1].getElementsByTagName('input')[0].value.trim();
 		var labelType = $changeTr[i].children[2].getElementsByTagName('select')[0].value;
 		var amount = $changeTr[i].children[3].getElementsByTagName('select')[0].value;
 		var valid = $changeTr[i].children[4].getElementsByTagName('input')[0].value.trim();
+		
 
 		var essentialVal = $changeTr[i].children[5].getElementsByTagName('input');
+		
+
+		/*정규식 SQL INJECTUION 방어*/
+		var regExp = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/gi;
+		
+		var engNm = engNm.replace(regExp, "");
+		var korNm = korNm.replace(regExp, "");
+		
 		var essential = "";
 		console.log(essentialVal.length + "essentialVal.type : " + essentialVal[0].type);
 		if (essentialVal[0].type == "checkbox") {
@@ -422,6 +442,7 @@ $(document).on('click', '#btn_save', function () {
 			return;
 		}
 
+		
 		var trValue = {
 			'seqNum': $changeTr[i].getAttribute('data-seq'),
 			'engNm': $changeTr[i].children[0].getElementsByTagName('input')[0].value,
@@ -431,6 +452,10 @@ $(document).on('click', '#btn_save', function () {
 			'valid': $changeTr[i].children[4].getElementsByTagName('input')[0].value,
 			'essentialVal': essential,
 		}
+		/*정규식 SQL INJECTUION 방어*/
+		trValue.engNm = trValue.engNm.replace(regExp, "");
+		trValue.korNm = trValue.korNm.replace(regExp, "");
+
 		changeList.push(trValue);
 		console.log(changeList.length + "insertList : " + changeList[0].essentialVal);
 	}

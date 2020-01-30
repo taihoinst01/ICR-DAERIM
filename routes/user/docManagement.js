@@ -84,24 +84,38 @@ router.post('/selectBatchPoMlExport', function (req, res) {
     });
 });
 
-router.get('/downloadExcel', function (req, res,){
+router.get('/downloadExcelC', function (req, res,){
     sync.fiber(function(){
-
         var saveFileName = req.query.fileName;
-
-        //익스플로러 한글 변환 작업
-        var iconv = new Iconv('euc-kr', 'utf-8');
-        var saveFileNameKor = new Buffer(saveFileName, 'binary');
         
-        
-        var file = appRoot + '/report/' + saveFileNameKor;
+        var file = appRoot + '/report/' + saveFileName;
         var mimetype = mime.lookup(file);
-        res.setHeader('Content-disposition', 'attachment; filename=' + getDownloadFilename(req, saveFileNameKor));
+        res.setHeader('Content-disposition', 'attachment; filename=' + getDownloadFilename(req, saveFileName));
         res.setHeader('Content-type', mimetype);
         var filestream = fs.createReadStream(file);
         filestream.pipe(res);
     })
 })
+
+router.get('/downloadExcelE', function (req, res,){
+    sync.fiber(function(){
+        var saveFileName = req.query.fileName;
+        
+        //익스플로러 한글 변환 작업
+        var iconv = new Iconv('euc-kr', 'utf-8');  
+        var saveFileName = new Buffer(saveFileName, 'binary');
+    
+        
+        var file = appRoot + '/report/' + saveFileName;
+        var mimetype = mime.lookup(file);
+        res.setHeader('Content-disposition', 'attachment; filename=' + getDownloadFilename(req, saveFileName));
+        res.setHeader('Content-type', mimetype);
+        var filestream = fs.createReadStream(file);
+        filestream.pipe(res);
+    })
+})
+
+
 
 
 // 보고서 생성 후 Excel 다운로드
@@ -142,7 +156,7 @@ router.post('/selectReportExport', function (req, res) {
             header.push("현장코드");
 
             for(var i = 0; i < docLabelList.length; i++)
-            {
+            {   
                 header.push(docLabelList[i].KORNM);
             }
 

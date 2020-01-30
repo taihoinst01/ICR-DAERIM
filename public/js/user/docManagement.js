@@ -123,6 +123,10 @@ function datePickerEvent() {
 // 문서 조회 버튼 click 이벤트
 function selectBtnClick() {
     $('#btn_search').click(function () {
+        
+        
+        
+
         var cdSite = $('#searchSiteCd').val();
         var docTopType = $('#docTopTypeSelect').val();
         var startDate = $('#searchStartDate').val();
@@ -131,6 +135,8 @@ function selectBtnClick() {
         var fileName = $('#searchFileNm').val();
         var sequence = $('#searchSequence').val();
 
+        var regExp = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/gi;
+        var fileName = fileName.replace(regExp, "");
         var params = {
             
             'docTopType': docTopType,
@@ -197,7 +203,6 @@ function selectReportExport(params, isInit) {
             if (!isInit) progressId = showProgressBar();
         },
         success: function (data) {
-            
             if (!data.error) {
                 labels = data.docLabelList;
                 datas = data.docDataList;
@@ -219,11 +224,6 @@ function selectReportExport(params, isInit) {
                         console.log(textVal);
                     }
                 }
-                
-                
-
-                
-
 
             //     appendDocTableHeader(data.docLabelList, data.docDataList); // 문서조회 table html 렌더링
             //     checkAllBoxClick(); // all 체크박스 background css 적용
@@ -234,7 +234,18 @@ function selectReportExport(params, isInit) {
             // } else {
             //     fn_alert('alert', 'ERROR');
             }
-            window.location.href = '/docManagement/downloadExcel?fileName=' + data.fileName;
+       
+            var agent = navigator.userAgent.toLowerCase();
+            // 크롬 1, expolor 2
+            var browserCheck = ""
+            if (agent.indexOf("chrome") != -1) {
+                window.location.href = '/docManagement/downloadExcelC?fileName=' + data.fileName;
+            }else{
+                window.location.href = '/docManagement/downloadExcelE?fileName=' + data.fileName;
+            }
+
+            //window.location.href = '/docManagement/downloadExcel?fileName=' + data.fileName+"&browserCheck="+browserCheck;
+            
             endProgressBar(progressId);
             //fn_alert('alert', '인식률 보고서 생성 완료!');
         },
@@ -245,6 +256,7 @@ function selectReportExport(params, isInit) {
         }
     });
 }
+
 
 
 
