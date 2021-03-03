@@ -51,7 +51,7 @@
     "passport-remember-me": "0.0.1",
     "path": "^0.12.7",
     "pdf2img": "^0.5.0",
-    "pug": "^2.0.0-beta6",
+    "pug": "^3.0.1",
     "python-shell": "^0.5.0",
     "querystring": "^0.2.0",
     "request": "^2.87.0",
